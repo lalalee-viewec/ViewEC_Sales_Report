@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務週報系統 3.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --blue: #2563eb; --blue-light: #dbeafe; --blue-text: #1e40af;
+    --orange: #ea580c; --orange-light: #ffedd5; --orange-text: #9a3412;
+    --purple: #7c3aed; --purple-light: #ede9fe; --purple-text: #5b21b6;
+    --green: #16a34a; --green-light: #dcfce7; --green-text: #14532d;
+    --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+    --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+    --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937;
+    --white: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; background: #f0f4f8; color: var(--gray-800); font-size: 14px; }
+  
+  /* Header */
+  .header { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); font-weight: 500; }
+  .logo-icon { width: 32px; height: 32px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+  .divider-v { width: 1px; height: 32px; background: var(--gray-200); }
+  .header-title h1 { font-size: 18px; font-weight: 600; color: var(--gray-800); }
+  .header-title p { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .week-selector { display: flex; align-items: center; gap: 8px; }
+  .week-selector label { font-size: 12px; color: var(--gray-500); }
+  .week-selector select { border: 1px solid var(--gray-300); border-radius: 6px; padding: 5px 10px; font-size: 13px; background: var(--white); color: var(--gray-700); cursor: pointer; outline: none; }
+  .last-update { font-size: 11px; color: var(--gray-400); }
+
+  /* Main */
+  .main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+  
+  /* Section */
+  .section-title { font-size: 15px; font-weight: 600; color: var(--gray-700); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section-title svg { width: 16px; height: 16px; }
+  
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .kpi-card { background: var(--white); border-radius: 12px; padding: 20px 24px; border: 1px solid var(--gray-200); position: relative; }
+  .kpi-card.blue { border-left: 4px solid var(--blue); }
+  .kpi-card.orange { border-left: 4px solid var(--orange); }
+  .kpi-card.purple { border-left: 4px solid var(--purple); }
+  .kpi-card.green { border-left: 4px solid var(--green); cursor: pointer; }
+  .kpi-card.green:hover { box-shadow: 0 2px 8px rgba(22,163,74,0.15); }
+  .kpi-label { font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+  .kpi-number { font-size: 36px; font-weight: 700; line-height: 1; }
+  .kpi-card.blue .kpi-number { color: var(--blue); }
+  .kpi-card.orange .kpi-number { color: var(--orange); }
+  .kpi-card.purple .kpi-number { color: var(--purple); }
+  .kpi-card.green .kpi-number { color: var(--green); }
+  .kpi-pct { font-size: 13px; color: var(--gray-400); margin-top: 4px; }
+  .kpi-expand-btn { position: absolute; top: 16px; right: 16px; font-size: 11px; color: var(--green); background: var(--green-light); border: none; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+
+  /* Consultant Tables */
+  .tables-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .table-card { background: var(--white); border-radius: 12px; padding: 20px; border: 1px solid var(--gray-200); }
+  .table-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .table-card-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+  .table-card-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .badge-blue { background: var(--blue-light); }
+  .badge-blue svg { color: var(--blue); fill: var(--blue); width: 12px; height: 12px; }
+  .table-card-sub { font-size: 11px; color: var(--gray-400); margin-bottom: 14px; }
+  .perf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .perf-table th { color: var(--gray-400); font-weight: 500; text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--gray-100); font-size: 11px; }
+  .perf-table td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--gray-50); color: var(--gray-700); }
+  .perf-table tr:last-child td { border-bottom: none; }
+  .perf-table .total-row td { font-weight: 600; color: var(--gray-800); border-top: 1px solid var(--gray-200); padding-top: 10px; }
+  .pct-blue { color: var(--blue); font-weight: 600; }
+  .pct-orange { color: var(--orange); font-weight: 600; }
+  
+  /* Deep Analysis */
+  .analysis-card { background: var(--white); border-radius: 12px; border: 1px solid var(--gray-200); margin-bottom: 32px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--gray-200); padding: 0 20px; }
+  .tab-btn { padding: 14px 20px; font-size: 13px; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.2s; white-space: nowrap; }
+  .tab-btn.active { color: var(--gray-800); border-bottom-color: var(--gray-700); font-weight: 600; }
+  .tab-btn:hover:not(.active) { color: var(--gray-700); }
+  .tab-content { padding: 24px; display: none; }
+  .tab-content.active { display: block; }
+  
+  /* Charts in tabs */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .chart-box { border: 1px solid var(--gray-200); border-radius: 10px; padding: 20px; }
+  .chart-box-title { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .chart-box-title .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-blue { background: var(--blue); }
+  .dot-green { background: var(--green); }
+  .dot-orange { background: var(--orange); }
+  .dot-purple { background: var(--purple); }
+
+  /* Single chart with stat cards */
+  .chart-stats-layout { display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: start; }
+  .stat-pills { display: flex; flex-direction: column; gap: 8px; }
+  .stat-pill { display: flex; justify-content: space-between; align-items: center; background: var(--gray-50); border-radius: 8px; padding: 10px 14px; }
+  .stat-pill-name { font-size: 13px; color: var(--gray-700); }
+  .stat-pill-count { font-size: 13px; font-weight: 600; }
+  .stat-pill-count.orange { color: var(--orange-text); background: var(--orange-light); padding: 2px 8px; border-radius: 4px; }
+  .stat-pill-count.purple { color: var(--purple-text); background: var(--purple-light); padding: 2px 8px; border-radius: 4px; }
+  
+  /* Progress table */
+  .progress-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .progress-table th { color: var(--gray-400); font-weight: 500; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--gray-100); font-size: 11px; background: var(--gray-50); }
+  .progress-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); vertical-align: top; }
+  .progress-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .badge-approach { background: #dbeafe; color: #1e40af; }
+  .badge-proposal { background: #dcfce7; color: #14532d; }
+  .badge-lost { background: #fee2e2; color: #991b1b; }
+  .badge-default { background: var(--gray-100); color: var(--gray-600); }
+
+  /* Meeting detail */
+  .meeting-detail { margin-top: 16px; display: none; }
+  .meeting-detail.open { display: block; }
+  .meeting-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 0 4px; }
+  .meeting-detail-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+  .meeting-detail-count { font-size: 12px; color: var(--gray-400); }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-row input, .filter-row select { border: 1px solid var(--gray-200); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--gray-700); background: var(--white); outline: none; }
+  .filter-row input { flex: 1; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .detail-table th { background: var(--gray-50); color: var(--gray-500); font-weight: 500; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+  .detail-table td { padding: 10px 10px; border-bottom: 1px solid var(--gray-50); color: var(--gray-700); vertical-align: top; }
+  .detail-table tr:last-child td { border-bottom: none; }
+  .badge-new { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+  .badge-old { background: var(--gray-100); color: var(--gray-600); padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+  .contact-status { color: var(--blue); font-size: 11px; }
+  .empty { color: var(--gray-300); font-size: 11px; }
+
+  /* Donut layout */
+  .donut-layout { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: start; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gray-600); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Two-col stats (already-met insights) */
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* ===== PAGE NAV ===== */
+  .page-nav { background: var(--white); border-bottom: 1px solid var(--gray-200); display: flex; padding: 0 32px; }
+  .page-nav-btn { padding: 12px 24px; font-size: 14px; font-weight: 500; color: var(--gray-500); cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .page-nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+  .page-nav-btn:hover:not(.active) { color: var(--gray-700); }
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* ===== PIPELINE ===== */
+  .pipeline-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .pipeline-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pipeline-filter-btn { padding: 5px 14px; font-size: 12px; border: 1px solid var(--gray-300); border-radius: 20px; background: var(--white); color: var(--gray-600); cursor: pointer; transition: all 0.15s; }
+  .pipeline-filter-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
+  .pipeline-search { border: 1px solid var(--gray-200); border-radius: 6px; padding: 6px 12px; font-size: 13px; color: var(--gray-700); background: var(--white); outline: none; width: 200px; }
+  .pipeline-table-wrap { overflow-x: auto; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--white); }
+  .pipeline-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .pipeline-table th { background: var(--gray-50); color: var(--gray-500); font-weight: 500; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+  .pipeline-table td { padding: 10px 14px; border-bottom: 1px solid var(--gray-50); color: var(--gray-700); vertical-align: top; }
+  .pipeline-table tr:last-child td { border-bottom: none; }
+  .pipeline-table tr:hover td { background: var(--gray-50); }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .status-合約流程 { background: #dcfce7; color: #14532d; }
+  .status-洽談中 { background: #dbeafe; color: #1e40af; }
+  .status-本週會議 { background: #fef9c3; color: #713f12; }
+  .status-暫停 { background: #f3f4f6; color: #6b7280; }
+  .status-default { background: #ede9fe; color: #5b21b6; }
+  .pipeline-note { font-size: 12px; color: var(--gray-600); white-space: pre-wrap; line-height: 1.5; }
+  .pipeline-loading { text-align: center; padding: 40px; color: var(--gray-400); font-size: 14px; }
+  .pipeline-error { text-align: center; padding: 40px; color: var(--orange); font-size: 13px; }
+  .pipeline-count { font-size: 12px; color: var(--gray-400); }
+  .pipeline-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .pipeline-sum-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 18px; font-size: 12px; color: var(--gray-500); }
+  .pipeline-sum-card span { display: block; font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .pipeline-sum-card.c1 span { color: var(--green); }
+  .pipeline-sum-card.c2 span { color: var(--blue); }
+  .pipeline-sum-card.c3 span { color: #ca8a04; }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 3h18v3H3zm0 5h12v3H3zm0 5h18v3H3zm0 5h12v3H3z"/></svg>
+      </div>
+      業務週報系統 3.0
+    </div>
+    <div class="divider-v"></div>
+    <div class="header-title">
+      <h1>2026 市場部：諮詢開發轉化效能週報</h1>
+      <p>績效追蹤與數據分析系統</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="week-selector">
+      <label>選擇週次：</label>
+      <select id="weekSelect" onchange="switchWeek(this.value)">
+        <option value="2026/04/24" selected>2026/04/24</option>
+      </select>
+    </div>
+    <div class="last-update" id="lastUpdateLabel">最後更新日期：2026/04/24</div>
+  </div>
+</div>
+
+
+<!-- PAGE NAV -->
+<div class="page-nav">
+  <button class="page-nav-btn active" onclick="switchPage('weekly', this)">📊 效能週報</button>
+  <button class="page-nav-btn" onclick="switchPage('pipeline', this)">📈 Sales Pipeline</button>
+</div>
+
+<!-- MAIN -->
+<div id="page-weekly" class="page-section active">
+<div class="main">
+
+  <!-- KPI Section -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    核心績效指標
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">總名單數</div>
+      <div class="kpi-number" id="kpi-total">—</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">未接觸</div>
+      <div class="kpi-number" id="kpi-untouched">—</div>
+      <div class="kpi-pct" id="kpi-untouched-pct"></div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">已接觸未開會</div>
+      <div class="kpi-number" id="kpi-contacted">—</div>
+      <div class="kpi-pct" id="kpi-contacted-pct"></div>
+    </div>
+    <div class="kpi-card green" onclick="toggleMeeting()">
+      <div class="kpi-label">已開會</div>
+      <div class="kpi-number" id="kpi-met">—</div>
+      <div class="kpi-pct" id="kpi-met-pct"></div>
+      <button class="kpi-expand-btn" id="meetingToggleBtn">▼ 展開</button>
+    </div>
+  </div>
+
+  <!-- Meeting Detail -->
+  <div class="meeting-detail" id="meetingDetail">
+    <div class="meeting-detail-header">
+      <div class="meeting-detail-title" id="meetingDetailTitle">已開會名單明細</div>
+      <div class="meeting-detail-count" id="meetingDetailCount"></div>
+    </div>
+    <div class="filter-row">
+      <input type="text" id="searchInput" placeholder="搜尋客戶名稱..." oninput="filterMeeting()">
+      <select id="salesFilter" onchange="filterMeeting()">
+        <option value="">全部業務</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--white); margin-bottom: 24px;">
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th>分配日期</th><th>客戶名稱</th><th>來源類型</th><th>新客/老客</th>
+            <th>業務</th><th>開會日期</th><th>接觸狀態</th><th>狀況</th><th>備註</th>
+          </tr>
+        </thead>
+        <tbody id="meetingTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Consultant Section -->
+  <div class="section-title" style="margin-top: 4px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    諮詢師轉化
+  </div>
+
+  <div class="tables-grid">
+    <!-- 近7天 -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <div class="table-card-title">近 7 天名單狀況</div>
+        <div class="table-card-badge badge-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+      </div>
+      <div class="table-card-sub">績效追蹤</div>
+      <table class="perf-table">
+        <thead><tr><th>諮詢師</th><th>分配</th><th>接觸數</th><th>接觸率</th><th>開會</th><th>開會率</th></tr></thead>
+        <tbody id="table7d"></tbody>
+      </table>
+    </div>
+    <!-- 近14天 -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <div class="table-card-title">近 14 天名單狀況</div>
+        <div class="table-card-badge badge-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+      </div>
+      <div class="table-card-sub">績效追蹤</div>
+      <table class="perf-table">
+        <thead><tr><th>諮詢師</th><th>分配</th><th>接觸數</th><th>接觸率</th><th>開會</th><th>開會率</th></tr></thead>
+        <tbody id="table14d"></tbody>
+      </table>
+    </div>
+    <!-- 年度累計 -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <div class="table-card-title">2026 年度累計（1/1 至今）</div>
+        <div class="table-card-badge badge-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+      </div>
+      <div class="table-card-sub">績效追蹤</div>
+      <table class="perf-table">
+        <thead><tr><th>諮詢師</th><th>分配</th><th>接觸數</th><th>接觸率</th><th>開會</th><th>開會率</th></tr></thead>
+        <tbody id="tableYTD"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Deep Analysis -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    深度分析
+  </div>
+
+  <div class="analysis-card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('source', this)">名單來源</button>
+      <button class="tab-btn" onclick="switchTab('untouched', this)">未接觸原因</button>
+      <button class="tab-btn" onclick="switchTab('nomet', this)">已接觸未開會原因</button>
+      <button class="tab-btn" onclick="switchTab('insight', this)">已開會洞察</button>
+    </div>
+
+    <!-- Tab 1: 名單來源 -->
+    <div class="tab-content active" id="tab-source">
+      <div class="two-col">
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot dot-blue"></span>總名單來源分布</div>
+          <div style="position:relative;height:240px;"><canvas id="chartSourceAll" role="img" aria-label="總名單來源分布長條圖">來源分布資料</canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot dot-green"></span>已開會名單來源分布</div>
+          <div style="position:relative;height:240px;"><canvas id="chartSourceMet" role="img" aria-label="已開會名單來源分布長條圖">來源分布資料</canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 未接觸原因 -->
+    <div class="tab-content" id="tab-untouched">
+      <div class="chart-box" style="border-color: var(--orange-light);">
+        <div class="chart-box-title" style="color: var(--orange-text);"><span class="dot dot-orange"></span>未接觸原因分布</div>
+        <div class="chart-stats-layout">
+          <div style="position:relative;" id="untouchedChartWrap">
+            <canvas id="chartUntouched" role="img" aria-label="未接觸原因分布長條圖">原因分布資料</canvas>
+          </div>
+          <div class="stat-pills" id="untouchedStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: 已接觸未開會原因 -->
+    <div class="tab-content" id="tab-nomet">
+      <div class="chart-box" style="border-color: var(--purple-light);">
+        <div class="chart-box-title" style="color: var(--purple-text);"><span class="dot dot-purple"></span>已接觸未開會原因分布</div>
+        <div class="chart-stats-layout">
+          <div style="position:relative;" id="nometChartWrap">
+            <canvas id="chartNoMet" role="img" aria-label="已接觸未開會原因分布長條圖">原因分布資料</canvas>
+          </div>
+          <div class="stat-pills" id="nometStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: 已開會洞察 -->
+    <div class="tab-content" id="tab-insight">
+      <div class="insight-grid">
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot dot-purple"></span>產品分布</div>
+          <div class="donut-layout">
+            <div style="position:relative;height:200px;width:200px;"><canvas id="chartProduct" role="img" aria-label="產品分布圓餅圖">產品分布資料</canvas></div>
+            <div class="donut-legend" id="productLegend"></div>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot" style="background:#f472b6;"></span>需求分布</div>
+          <div style="position:relative;" id="demandChartWrap">
+            <canvas id="chartDemand" role="img" aria-label="需求分布長條圖">需求分布資料</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box" style="margin-top: 0;">
+        <div class="chart-box-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink:0"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>進度追蹤</div>
+        <table class="progress-table">
+          <thead><tr><th>進度狀態</th><th>數量</th><th>備註 / 未轉換原因</th></tr></thead>
+          <tbody id="progressTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DATA STORE ====================
+// All data keyed by week date string. Add new weeks here.
+const WEEKS = {
+  "2026/04/24": {
+    lastUpdate: "2026/04/24",
+    kpi: { total: 711, untouched: 447, contacted: 225, met: 39 },
+    table7d: [
+      { name: "Jessica", alloc: 23, touch: 0,  touchRate: "0.0%", meet: 0, meetRate: "0.0%" },
+      { name: "Tank",    alloc: 20, touch: 1,  touchRate: "5.0%", meet: 1, meetRate: "5.0%" },
+    ],
+    table14d: [
+      { name: "Jessica", alloc: 23,  touch: 0,  touchRate: "0.0%", meet: 0, meetRate: "0.0%" },
+      { name: "Tank",    alloc: 207, touch: 12, touchRate: "5.8%", meet: 4, meetRate: "1.9%" },
+    ],
+    tableYTD: [
+      { name: "Jessica", alloc: 144, touch: 88, touchRate: "61.1%", meet: 13, meetRate: "9.0%" },
+      { name: "Stacy",   alloc: 111, touch: 77, touchRate: "69.4%", meet: 13, meetRate: "11.7%" },
+      { name: "Tank",    alloc: 456, touch: 99, touchRate: "21.7%", meet: 13, meetRate: "2.9%" },
+    ],
+    sourceAll: { "活動": 287, "Meta投廣": 254, "官網": 151, "官方line": 8, "來電": 5, "信箱": 4, "轉介": 1, "專案組": 1 },
+    sourceMet: { "官網": 15, "Meta投廣": 8, "活動": 7, "官方line": 4, "來電": 3, "轉介": 1, "信箱": 1 },
+    untouchedReasons: { "無回覆": 298, "未接": 93, "掛電話": 7, "資訊不足": 6 },
+    nometReasons: { "無回覆": 63, "無需求": 49, "評估中": 37, "不合適": 22, "窗口忙碌待聯繫": 11, "其他": 10, "時間未到": 8, "掛電話": 5, "未接": 5, "預算不足": 3, "放鳥": 2, "資訊不足": 2, "已有合作夥伴": 1 },
+    productDist: { "食品（含保健食品）": 5, "美妝與個人護理": 4, "食品": 4, "寵物用品": 3, "服飾配件類": 2, "汽配用品": 2, "家居用品": 2, "Mini PC": 1, "保養品": 1, "五金": 1, "零食": 1, "防霉技術": 1, "藝人周邊": 1, "工業科研用品": 1, "茶葉": 1, "水性護木油": 1, "水晶(風水)": 1, "嬰兒肌膚保養品": 1, "汽車零件": 1, "bb槍": 1 },
+    demandDist: { "亞馬遜代營運": 16, "站外網紅行銷(KOL/KOC 影片拍攝)": 6, "TikTok/TikTok Shop 台灣館": 3, "其他": 3, "Amazon、Walmart、Shopify": 1, "TikTOK": 1, "自架官網諮詢": 1, "日本樂天/亞馬遜": 1 },
+    progressData: [
+      { status: "Approach",      count: 14, note: "" },
+      { status: "Proposal",      count: 10, note: "" },
+      { status: "Disappearance", count: 5,  note: "" },
+      { status: "Prospecting",   count: 3,  note: "" },
+      { status: "Cold Storage",  count: 3,  note: "" },
+      { status: "Commit",        count: 1,  note: "" },
+      { status: "Coverage",      count: 1,  note: "" },
+      { status: "Lost",          count: 1,  note: "" },
+    ],
+    meetingRows: [
+      { allocDate: "2026/04/23", client: "威盛科技", source: "轉介", type: "新客", sales: "Tank", meetDate: "2026/04/23", contactStatus: "首次｜已回應", status: "Ding Go執行長轉介\n會後內部討論中", note: "" },
+      { allocDate: "2026/04/17", client: "海上星星股份有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/22", contactStatus: "首次｜已回應", status: "4/17發信\n4/22會議表示要做台灣官網\n未來或許能合作JP TK", note: "" },
+      { allocDate: "2026/04/15", client: "安德魯紳有限公司", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/23", contactStatus: "首次｜已回應", status: "4/15發信,推JP TK\n4/21主動來電,加line拉群,提拱Amz簡報\n4/23會議表示Q4才會準備好產品", note: "2026東京食品展" },
+      { allocDate: "2026/04/15", client: "長城料理實業有限公司", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/22", contactStatus: "二次｜已回應", status: "4/15發信,推JP TK\n4/22合約內部用印流程", note: "2026東京食品展" },
+      { allocDate: "2026/04/08", client: "Shh", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/10", contactStatus: "首次｜已回應", status: "4/8發信,回信加LINE約會議\n會議後評估中", note: "" },
+      { allocDate: "2026/03/30", client: "田榮股份有限公司", source: "Meta投廣", type: "新客", sales: "Tank", meetDate: "2026/04/13", contactStatus: "二次｜已回應", status: "3/30發信\n4/10電聯加line約會議\n4/13會議覺得太花錢\n4/20關心無回覆", note: "" },
+      { allocDate: "2026/03/27", client: "艾葳國際美麗股份有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/27", contactStatus: "二次｜已回應", status: "3/23發信\n3/30電聯未接\n4/10電聯未接\n4/23主動來電,加LINE 拉群", note: "" },
+      { allocDate: "2026/03/24", client: "Iceman Society", source: "官方line", type: "新客", sales: "Tank", meetDate: "2026/03/31", contactStatus: "首次｜已回應", status: "3/24發信；3/25加line拉群\n3/31會議；4/9提供官網報價", note: "" },
+      { allocDate: "2026/03/19", client: "森水國際有限公司", source: "官方line", type: "老客", sales: "Tank", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "已開立美國站，尚未上架\n3/20開會,3/24回覆窗口問題\n3/30、4/8關心無進展", note: "2024已開過會；202512再次詢問" },
+      { allocDate: "2026/03/18", client: "捷貿興業有限公司", source: "來電", type: "新客", sales: "Tank", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "3/18發信.加LINE\n3/20開會\n4/9拜訪,內部討論中", note: "" },
+      { allocDate: "2026/03/18", client: "私廚房", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/07", contactStatus: "首次｜已回應", status: "3/18發信\n4/1窗口主動致電加line\n4/7拜訪推JP TK；窗口後續須跟合夥人討論\n4/15回覆不做", note: "" },
+      { allocDate: "2026/03/18", client: "盛菱國際有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/04/01", contactStatus: "首次｜已回應", status: "3/18發信\n4/1會議，後續報價不讀不回", note: "" },
+      { allocDate: "2026/03/09", client: "康鮮國際股份有限公司", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/03/17", contactStatus: "首次｜已回應", status: "3/12 想了解tk服務\n3/9 mail", note: "" },
+      { allocDate: "2026/03/06", client: "優克美科技股份有限公司", source: "來電", type: "老客", sales: "Jessica", meetDate: "2026/03/10", contactStatus: "首次｜已回應", status: "3/6約3/10上午會議", note: "" },
+      { allocDate: "2026/03/05", client: "傳淇企業有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/03/24", contactStatus: "首次｜已回應", status: "3/5下午接通,約3/24下午會議", note: "有做Ebay AMZ，新品,人力問題\n希望前期代營運服務,後面自己做" },
+      { allocDate: "2026/03/03", client: "澄和科技", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "3/3約3/20下午會議", note: "想多方面了解通路適不適合做" },
+      { allocDate: "2026/03/03", client: "起站科技有限公司", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/03/10", contactStatus: "首次｜已回應", status: "3/4 私密噴霧,長照舒緩噴霧\n3/3 mail", note: "" },
+      { allocDate: "2026/03/02", client: "風群股份有限公司", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/13", contactStatus: "首次｜已回應", status: "3/3 約3/13下午14:30會議\n3/2 明天下午15:00回撥", note: "" },
+      { allocDate: "2026/02/23", client: "街聲", source: "官方line", type: "新客", sales: "Jessica", meetDate: "2026/03/19", contactStatus: "首次｜已回應", status: "2/24已邀約會議3/19下午拜訪\n2/23下午未接", note: "" },
+      { allocDate: "", client: "家庭雲端", source: "活動", type: "老客", sales: "Stacy", meetDate: "2026/02/25", contactStatus: "首次｜已回應", status: "2/25 說明TK JP方案", note: "" },
+      { allocDate: "2026/02/13", client: "漢唐科技", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/02/26", contactStatus: "首次｜已回應", status: "2/26 想要做B2B\n2/13 mail", note: "" },
+      { allocDate: "2026/02/10", client: "比德堡實業有限公司", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/03/04", contactStatus: "二次｜已回應", status: "2/10 mail 2/12 年後約會議", note: "" },
+      { allocDate: "2026/02/10", client: "饌元股份有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/04/09", contactStatus: "首次｜已回應", status: "改約4/16拜訪\n3/9約拜訪4/9下午14:00\n2/26多次聯繫未果，今日才回覆，3/2當週會與我聯繫\n2/13已加Line聯繫，會議暫定3月中", note: "去年有聽過亞馬遜官方講座，沒有FDA證明" },
+      { allocDate: "2026/01/29", client: "睿森實業有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/03/10", contactStatus: "二次｜已回應", status: "1/29發信\n2/4電聯加line,預計年後約會議\n2/10提供JP TK服務參考\n3/5 line群關心,已約3/10會議\n會議後評估中,暫無回覆", note: "產品:生活用品\n目標:AMZ JP；同時詢問eBay" },
+      { allocDate: "2026/01/22", client: "曼妙思", source: "官網", type: "新客", sales: "Stacy", meetDate: "", contactStatus: "二次｜已回應", status: "2/5 會議 目前帳號開啟,等候美國商標\n1/22 mail", note: "" },
+      { allocDate: "2026/01/22", client: "奕瑪國際", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/01/29", contactStatus: "首次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/22", client: "LING CHA", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/03/12", contactStatus: "二次｜已回應", status: "2/26已約3/12會議\n1/23上午未接，已發信件\n1/21已加Line，未回應", note: "" },
+      { allocDate: "2026/01/22", client: "台灣先柏油漆廠有限公司", source: "活動", type: "新客", sales: "Stacy", meetDate: "2026/02/04", contactStatus: "首次｜已回應", status: "2/4會議\n1/22 mail", note: "" },
+      { allocDate: "2026/01/22", client: "金方舟國際有限公司", source: "活動", type: "新客", sales: "Stacy", meetDate: "", contactStatus: "首次｜已回應", status: "1/22 因成分含有乳製品,等候金匯確認回覆", note: "" },
+      { allocDate: "2026/01/15", client: "台灣威力綠能股份有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/02/05", contactStatus: "二次｜已回應", status: "3/3已給報價單,要瞭解規劃預估成效(營運給)\n2/25聯繫下禮拜會提交報價單\n1/20預約2/5會議提案", note: "" },
+      { allocDate: "2026/01/15", client: "安可有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/02/02", contactStatus: "二次｜已回應", status: "2/2會議過程已知預算不足，後續不讀不回\n2/2已約會議提案", note: "" },
+      { allocDate: "2026/01/14", client: "博太生醫", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/03", contactStatus: "二次｜已回應", status: "3/3會在約二次會討論前期投入成本\n2/10 約3/3會議\n2/4公司內部調動，想了解代操及流程\n1/30下午回信，會議邀約中", note: "" },
+      { allocDate: "2026/01/12", client: "芙亞國際", source: "信箱", type: "新客", sales: "Tank", meetDate: "2026/02/02", contactStatus: "首次｜已回應", status: "已約2/2開會\n2/10加LINE\n已選擇其他代營運", note: "" },
+      { allocDate: "2026/01/09", client: "宸穩生技", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/01/20", contactStatus: "首次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/09", client: "聯盛速配國際貿易有限公司", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/02/10", contactStatus: "首次｜已回應", status: "2/26主動回覆內部考量，先暫停\n2/5已約2/10會議提案\n1/22未接", note: "內部人員因素，提出先暫緩，明年再繼續" },
+      { allocDate: "2026/01/09", client: "合同会社 Torus", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/01/28", contactStatus: "二次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/08", client: "Partslinq", source: "官方line", type: "新客", sales: "Stacy", meetDate: "2026/03/16", contactStatus: "首次｜已回應", status: "帳號封閉無法解", note: "" },
+      { allocDate: "2026/01/07", client: "榮記洋行有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/01/29", contactStatus: "首次｜已回應", status: "2/23提案考慮中\n已約會議提案", note: "" },
+      { allocDate: "2026/01/05", client: "一芝軒企業有限公司", source: "來電", type: "新客", sales: "Stacy", meetDate: "2026/01/08", contactStatus: "首次｜已回應", status: "", note: "" },
+    ],
+  }
+};
+
+// ==================== CHART INSTANCES ====================
+let chartInstances = {};
+
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+// ==================== RENDER FUNCTIONS ====================
+function renderKPI(data) {
+  const { total, untouched, contacted, met } = data.kpi;
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-untouched').textContent = untouched;
+  document.getElementById('kpi-untouched-pct').textContent = total ? (untouched/total*100).toFixed(1)+'%' : '';
+  document.getElementById('kpi-contacted').textContent = contacted;
+  document.getElementById('kpi-contacted-pct').textContent = total ? (contacted/total*100).toFixed(1)+'%' : '';
+  document.getElementById('kpi-met').textContent = met;
+  document.getElementById('kpi-met-pct').textContent = total ? (met/total*100).toFixed(1)+'%' : '';
+}
+
+function renderPerfTable(tbodyId, rows) {
+  const tbody = document.getElementById(tbodyId);
+  if (!rows || rows.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--gray-300);text-align:center;padding:16px;">無資料</td></tr>'; return; }
+  let html = '';
+  let totalAlloc = 0, totalTouch = 0, totalMeet = 0;
+  rows.forEach(r => {
+    totalAlloc += r.alloc; totalTouch += r.touch; totalMeet += r.meet;
+    html += `<tr>
+      <td>${r.name}</td>
+      <td>${r.alloc}</td>
+      <td>${r.touch}</td>
+      <td class="pct-blue">${r.touchRate}</td>
+      <td>${r.meet}</td>
+      <td class="pct-orange">${r.meetRate}</td>
+    </tr>`;
+  });
+  const sumTouchRate = totalAlloc ? (totalTouch/totalAlloc*100).toFixed(1)+'%' : '';
+  const sumMeetRate = totalAlloc ? (totalMeet/totalAlloc*100).toFixed(1)+'%' : '';
+  html += `<tr class="total-row">
+    <td>總計</td><td>${totalAlloc}</td><td>${totalTouch}</td>
+    <td class="pct-blue">${sumTouchRate}</td><td>${totalMeet}</td>
+    <td class="pct-orange">${sumMeetRate}</td>
+  </tr>`;
+  tbody.innerHTML = html;
+}
+
+function renderHBarChart(canvasId, dataObj, color, wrapId) {
+  destroyChart(canvasId);
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  const wrap = document.getElementById(wrapId);
+  if (wrap) { const h = Math.max(labels.length * 40 + 60, 160); wrap.style.height = h+'px'; }
+  chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: color, borderRadius: 4, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' '+ctx.raw+' 筆' } } },
+      scales: {
+        x: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+function renderStatPills(containerId, dataObj, colorClass) {
+  const el = document.getElementById(containerId);
+  let html = '';
+  Object.entries(dataObj).forEach(([k, v]) => {
+    html += `<div class="stat-pill"><span class="stat-pill-name">${k}</span><span class="stat-pill-count ${colorClass}">${v} 筆</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderDonutChart(canvasId, dataObj) {
+  destroyChart(canvasId);
+  const colors = ['#818cf8','#a78bfa','#c084fc','#e879f9','#fb7185','#fb923c','#facc15','#34d399','#60a5fa','#2dd4bf','#f472b6','#94a3b8','#4ade80','#fbbf24'];
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length), borderWidth: 1, borderColor: '#fff' }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' '+ctx.label+': '+ctx.raw } } },
+      cutout: '65%'
+    }
+  });
+  const legend = document.getElementById('productLegend');
+  let lhtml = '';
+  labels.forEach((l, i) => { lhtml += `<div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l} (${values[i]})</div>`; });
+  legend.innerHTML = lhtml;
+}
+
+function renderDemandChart(canvasId, dataObj) {
+  destroyChart(canvasId);
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  const wrap = document.getElementById('demandChartWrap');
+  if (wrap) { wrap.style.height = Math.max(labels.length * 40 + 60, 160) + 'px'; }
+  chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: '#f472b6', borderRadius: 4, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, stepSize: 1 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderProgressTable(data) {
+  const tbody = document.getElementById('progressTableBody');
+  const badgeClass = s => {
+    if (s === 'Approach') return 'badge-approach';
+    if (s === 'Proposal') return 'badge-proposal';
+    if (s === 'Lost') return 'badge-lost';
+    return 'badge-default';
+  };
+  let html = '';
+  data.progressData.forEach(r => {
+    const noteHtml = r.note ? `<span style="color:var(--gray-600)">${r.note}</span>` : '';
+    html += `<tr>
+      <td><span class="progress-badge ${badgeClass(r.status)}">${r.status}</span></td>
+      <td>${r.count} 筆</td>
+      <td>${noteHtml}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+let allMeetingRows = [];
+function renderMeetingDetail(data, weekLabel) {
+  allMeetingRows = data.meetingRows || [];
+  document.getElementById('meetingDetailTitle').textContent = weekLabel + ' 已開會名單明細';
+  document.getElementById('meetingDetailCount').textContent = `共 ${allMeetingRows.length} 筆`;
+  // Populate sales filter
+  const salesSet = new Set(allMeetingRows.map(r => r.sales));
+  const sel = document.getElementById('salesFilter');
+  sel.innerHTML = '<option value="">全部業務</option>';
+  salesSet.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+  renderMeetingTable(allMeetingRows);
+}
+
+function renderMeetingTable(rows) {
+  const tbody = document.getElementById('meetingTableBody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--gray-300);padding:20px;">無資料</td></tr>'; return; }
+  let html = '';
+  rows.forEach(r => {
+    const noteHtml = r.note ? r.note : '';
+    const statusHtml = r.status ? r.status.replace(/\n/g, '<br>') : '';
+    html += '<tr>' +
+      '<td style="white-space:nowrap;">' + (r.allocDate || '') + '</td>' +
+      '<td style="font-weight:500;">' + (r.client || '') + '</td>' +
+      '<td>' + (r.source || '') + '</td>' +
+      '<td><span class="' + (r.type === '新客' ? 'badge-new' : 'badge-old') + '">' + (r.type || '') + '</span></td>' +
+      '<td>' + (r.sales || '') + '</td>' +
+      '<td style="white-space:nowrap;">' + (r.meetDate || '') + '</td>' +
+      '<td class="contact-status">' + (r.contactStatus || '') + '</td>' +
+      '<td style="font-size:11px;">' + statusHtml + '</td>' +
+      '<td style="color:var(--gray-400);font-size:11px;">' + noteHtml + '</td>' +
+      '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function filterMeeting() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const s = document.getElementById('salesFilter').value;
+  const filtered = allMeetingRows.filter(r => {
+    const matchQ = !q || r.client.toLowerCase().includes(q);
+    const matchS = !s || r.sales === s;
+    return matchQ && matchS;
+  });
+  renderMeetingTable(filtered);
+}
+
+// ==================== CHARTS INIT ====================
+function renderAllCharts(data) {
+  renderHBarChart('chartSourceAll', data.sourceAll, '#60a5fa', null);
+  renderHBarChart('chartSourceMet', data.sourceMet, '#4ade80', null);
+  renderHBarChart('chartUntouched', data.untouchedReasons, '#fb923c', 'untouchedChartWrap');
+  renderHBarChart('chartNoMet', data.nometReasons, '#c084fc', 'nometChartWrap');
+  renderStatPills('untouchedStats', data.untouchedReasons, 'orange');
+  renderStatPills('nometStats', data.nometReasons, 'purple');
+  renderDonutChart('chartProduct', data.productDist);
+  renderDemandChart('chartDemand', data.demandDist);
+  renderProgressTable(data);
+}
+
+// ==================== WEEK SWITCHING ====================
+let currentWeek = "2026/04/24";
+
+function switchWeek(week) {
+  currentWeek = week;
+  const data = WEEKS[week];
+  if (!data) return;
+  document.getElementById('lastUpdateLabel').textContent = '最後更新日期：' + data.lastUpdate;
+  renderKPI(data);
+  renderPerfTable('table7d', data.table7d);
+  renderPerfTable('table14d', data.table14d);
+  renderPerfTable('tableYTD', data.tableYTD);
+  renderAllCharts(data);
+  renderMeetingDetail(data, week);
+  // Close meeting detail on switch
+  const md = document.getElementById('meetingDetail');
+  md.classList.remove('open');
+  document.getElementById('meetingToggleBtn').textContent = '▼ 展開';
+}
+
+// ==================== TOGGLE MEETING ====================
+function toggleMeeting() {
+  const md = document.getElementById('meetingDetail');
+  const btn = document.getElementById('meetingToggleBtn');
+  if (md.classList.contains('open')) {
+    md.classList.remove('open');
+    btn.textContent = '▼ 展開';
+  } else {
+    md.classList.add('open');
+    btn.textContent = '▲ 收起';
+  }
+}
+
+// ==================== TAB SWITCHING ====================
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ==================== INIT ====================
+window.addEventListener('load', () => {
+  const sel = document.getElementById('weekSelect');
+  currentWeek = sel.value;
+  switchWeek(currentWeek);
+});
+</script>
+</div><!-- end page-weekly -->
+
+<!-- PIPELINE PAGE -->
+<div id="page-pipeline" class="page-section">
+  <div class="main">
+    <div class="section-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Sales Pipeline
+      <span style="font-size:11px;font-weight:400;color:var(--gray-400);margin-left:8px;">資料來自 Google Sheet，即時同步</span>
+    </div>
+
+    <div class="pipeline-summary">
+      <div class="pipeline-sum-card c1">合約流程<span id="ps-contract">—</span></div>
+      <div class="pipeline-sum-card c2">洽談中<span id="ps-talking">—</span></div>
+      <div class="pipeline-sum-card c3">本週會議<span id="ps-meeting">—</span></div>
+    </div>
+
+    <div class="pipeline-header">
+      <div class="pipeline-filters" id="pipelineFilters">
+        <button class="pipeline-filter-btn active" onclick="filterPipeline('all', this)">全部</button>
+        <button class="pipeline-filter-btn" onclick="filterPipeline('合約流程', this)">合約流程</button>
+        <button class="pipeline-filter-btn" onclick="filterPipeline('洽談中', this)">洽談中</button>
+        <button class="pipeline-filter-btn" onclick="filterPipeline('本週會議', this)">本週會議</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" class="pipeline-search" id="pipelineSearch" placeholder="搜尋客戶名稱…" oninput="renderPipelineTable()">
+        <button onclick="loadPipeline()" style="border:1px solid var(--gray-200);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--gray-600);background:var(--white);cursor:pointer;">↻ 重新整理</button>
+        <span class="pipeline-count" id="pipelineCount"></span>
+      </div>
+    </div>
+
+    <div class="pipeline-table-wrap">
+      <table class="pipeline-table">
+        <thead>
+          <tr>
+            <th>目前狀態</th>
+            <th>業務</th>
+            <th>狀態 / 備註</th>
+            <th>客戶來源</th>
+            <th>客戶名稱</th>
+            <th>接洽時間</th>
+            <th>銷售產品</th>
+          </tr>
+        </thead>
+        <tbody id="pipelineTableBody">
+          <tr><td colspan="7" class="pipeline-loading">載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== PAGE SWITCHING ====================
+function switchPage(name, el) {
+  document.querySelectorAll('.page-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.page-section').forEach(function(s) { s.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
+  if (name === 'pipeline' && pipelineData.length === 0) loadPipeline();
+}
+
+// ==================== PIPELINE ====================
+var PIPELINE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-kLIsxrGqnCbn6tb37iVL3WA-krO9LZBMBiT8KpQJ4UazcKystlIXwcrUbuM7ooBZYQpOQGfWSeQ8/pub?gid=0&single=true&output=csv';
+
+var pipelineData = [];
+var pipelineFilter = 'all';
+
+function parseCSV(text) {
+  var result = [];
+  var lines = text.replace(/\r/g, '').split('\n');
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var cols = [];
+    var cur = '';
+    var inQ = false;
+    for (var j = 0; j < lines[i].length; j++) {
+      var ch = lines[i][j];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.replace(/^"|"$/g,'').trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur.replace(/^"|"$/g,'').trim());
+    if (cols.some(function(c){ return c; })) result.push(cols);
+  }
+  return result;
+}
+
+function loadPipeline() {
+  document.getElementById('pipelineTableBody').innerHTML = '<tr><td colspan="7" class="pipeline-loading">載入中…</td></tr>';
+  fetch(PIPELINE_CSV + '&t=' + Date.now())
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var rows = parseCSV(text);
+      pipelineData = rows.map(function(r) {
+        return {
+          status:  r[0] || '',
+          sales:   r[1] || '',
+          note:    r[2] || '',
+          source:  r[3] || '',
+          client:  r[4] || '',
+          date:    r[5] || '',
+          product: r[6] || '',
+        };
+      });
+      updatePipelineSummary();
+      renderPipelineTable();
+    })
+    .catch(function(e) {
+      document.getElementById('pipelineTableBody').innerHTML = '<tr><td colspan="7" class="pipeline-error">載入失敗：' + e.message + '</td></tr>';
+    });
+}
+
+function updatePipelineSummary() {
+  document.getElementById('ps-contract').textContent = pipelineData.filter(function(r){ return r.status === '合約流程'; }).length;
+  document.getElementById('ps-talking').textContent  = pipelineData.filter(function(r){ return r.status === '洽談中'; }).length;
+  document.getElementById('ps-meeting').textContent  = pipelineData.filter(function(r){ return r.status === '本週會議'; }).length;
+}
+
+function filterPipeline(val, el) {
+  pipelineFilter = val;
+  document.querySelectorAll('.pipeline-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  renderPipelineTable();
+}
+
+function renderPipelineTable() {
+  var q = (document.getElementById('pipelineSearch').value || '').toLowerCase();
+  var rows = pipelineData.slice();
+  if (pipelineFilter !== 'all') rows = rows.filter(function(r){ return r.status === pipelineFilter; });
+  if (q) rows = rows.filter(function(r){ return r.client.toLowerCase().indexOf(q) !== -1 || r.sales.toLowerCase().indexOf(q) !== -1 || r.note.toLowerCase().indexOf(q) !== -1; });
+
+  document.getElementById('pipelineCount').textContent = '共 ' + rows.length + ' 筆';
+
+  function statusClass(s) {
+    if (s === '合約流程') return 'status-合約流程';
+    if (s === '洽談中')   return 'status-洽談中';
+    if (s === '本週會議') return 'status-本週會議';
+    if (s === '暫停')     return 'status-暫停';
+    return 'status-default';
+  }
+
+  if (!rows.length) {
+    document.getElementById('pipelineTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-300);">無資料</td></tr>';
+    return;
+  }
+
+  var html = '';
+  rows.forEach(function(r) {
+    var noteHtml = r.note.replace(/\n/g, '<br>');
+    html += '<tr>' +
+      '<td><span class="status-badge ' + statusClass(r.status) + '">' + r.status + '</span></td>' +
+      '<td style="font-weight:500;">' + r.sales + '</td>' +
+      '<td><div class="pipeline-note">' + noteHtml + '</div></td>' +
+      '<td>' + r.source + '</td>' +
+      '<td style="font-weight:500;">' + r.client + '</td>' +
+      '<td style="white-space:nowrap;">' + r.date + '</td>' +
+      '<td>' + r.product + '</td>' +
+      '</tr>';
+  });
+  document.getElementById('pipelineTableBody').innerHTML = html;
+}</script>
+</body>
+</html>
