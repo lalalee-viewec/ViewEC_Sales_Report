@@ -1412,7 +1412,37 @@ window.addEventListener('load', () => {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="22 7 13.5 15.5 8.5 10.5 1 17"/><polyline points="16 7 22 7 22 13"/></svg>
         每月營業額
       </span>
-      <button class="revenue-refresh-btn" onclick="loadRevenue()">↻ 重新整理</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a id="gsheet-link" href="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit" target="_blank"
+           style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:500;color:#14532d;background:#dcfce7;border:1px solid #86efac;border-radius:6px;text-decoration:none;"
+           onmouseover="this.style.background='#bbf7d0'" onmouseout="this.style.background='#dcfce7'">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          開啟 Google Sheet
+        </a>
+        <button onclick="showSheetUrlModal()" style="padding:6px 10px;font-size:12px;color:var(--gray-500);background:var(--white);border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;" title="設定 Google Sheet 網址">⚙️</button>
+        <!-- Sheet URL Modal -->
+        <div id="sheet-url-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+          <div style="background:white;border-radius:12px;padding:28px;width:520px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <div style="font-size:15px;font-weight:600;color:var(--gray-800);margin-bottom:6px;">設定 Google Sheet 連結</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-bottom:16px;">貼上你的 Google Sheet 完整網址，設定後點擊「開啟 Google Sheet」按鈕即可直接跳轉。</div>
+            <input id="sheet-url-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/..." 
+              style="width:100%;border:1px solid var(--gray-300);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--gray-700);outline:none;margin-bottom:16px;"
+              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-300)'">
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+              <button onclick="closeSheetUrlModal()" style="padding:8px 18px;font-size:13px;color:var(--gray-500);background:var(--gray-100);border:none;border-radius:6px;cursor:pointer;">取消</button>
+              <button onclick="saveSheetUrl()" style="padding:8px 18px;font-size:13px;color:white;background:var(--blue);border:none;border-radius:6px;cursor:pointer;font-weight:500;">儲存</button>
+            </div>
+          </div>
+        </div>
+        <button class="revenue-refresh-btn" onclick="loadRevenue()">↻ 重新整理</button>
+      </div>
+    </div>
+    <div id="rev-debug" style="display:none;background:#1e293b;color:#94a3b8;border-radius:8px;padding:14px 18px;font-size:11px;font-family:monospace;margin-bottom:16px;line-height:1.7;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="color:#f1f5f9;font-weight:600;">Debug：API 回傳原始資料</span>
+        <button onclick="document.getElementById('rev-debug').style.display='none'" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;">X 關閉</button>
+      </div>
+      <div id="rev-debug-content"></div>
     </div>
 
     <div class="revenue-stats">
@@ -1590,12 +1620,33 @@ function loadRevenue() {
     '<tr><td colspan="4" class="revenue-loading">載入中…</td></tr>';
 
   var pRev = fetch(REVENUE_URL).then(function(r){ return r.json(); })
-    .catch(function(){ return []; });
-  // 預計營業額：抓不到也不讓整頁壞掉
-  var pFc  = fetch(FORECAST_URL).then(function(r){ return r.json(); })
-    .catch(function(){ return []; });
+    .catch(function(e){ console.warn('revenue fetch error', e); return []; });
 
-  Promise.all([pRev, pFc]).then(function(res){
+  // 同時嘗試多種格式找到正確的 sheet 參數
+  var tryUrls = [
+    FORECAST_URL,                                             // ?sheet=預計營業額
+    REVENUE_BASE + '?sheet=' + encodeURIComponent('預計營業額'), // URL encode
+    REVENUE_BASE + '?sheet=forecast',
+    REVENUE_BASE + '?sheet=Forecast',
+  ];
+
+  // 依序嘗試，直到抓到有資料的為止
+  function tryFetch(urls, idx) {
+    if (idx >= urls.length) return Promise.resolve([]);
+    return fetch(urls[idx]).then(function(r){ return r.json(); }).then(function(data){
+      if (Array.isArray(data) && data.length > 0) {
+        showDebug('✅ 成功！使用參數: ' + urls[idx] + '\n回傳 ' + data.length + ' 列\n首列: ' + JSON.stringify(data[0]));
+        return data;
+      }
+      showDebug('⚠️ 空資料，嘗試下一個: ' + urls[idx] + '\n回傳: ' + JSON.stringify(data).slice(0,200));
+      return tryFetch(urls, idx + 1);
+    }).catch(function(e){
+      showDebug('❌ 失敗: ' + urls[idx] + '\n錯誤: ' + e.message);
+      return tryFetch(urls, idx + 1);
+    });
+  }
+
+  Promise.all([pRev, tryFetch(tryUrls, 0)]).then(function(res){
     var rev = res[0] || [];
     var fc  = res[1] || [];
 
@@ -1613,6 +1664,15 @@ function loadRevenue() {
     document.getElementById('revenueTableBody').innerHTML =
       '<tr><td colspan="4" class="revenue-error">載入失敗：' + e.message + '</td></tr>';
   });
+}
+
+function showDebug(msg) {
+  var el = document.getElementById('rev-debug');
+  var content = document.getElementById('rev-debug-content');
+  if (!el || !content) return;
+  el.style.display = 'block';
+  content.innerHTML += '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #334155;">' +
+    msg.replace(/\n/g, '<br>') + '</div>';
 }
 
 function formatMonth(str) {
@@ -1809,4 +1869,45 @@ function renderRevenueTable() {
   document.getElementById('revenueTableBody').innerHTML =
     html || '<tr><td colspan="4" style="text-align:center;color:var(--gray-300);">無資料</td></tr>';
 }
+
+
+// ===== Google Sheet URL Modal =====
+(function initSheetUrl() {
+  var saved = localStorage.getItem('gsheet_url');
+  if (saved) {
+    var link = document.getElementById('gsheet-link');
+    if (link) link.href = saved;
+  }
+})();
+
+function showSheetUrlModal() {
+  var modal = document.getElementById('sheet-url-modal');
+  var input = document.getElementById('sheet-url-input');
+  var saved = localStorage.getItem('gsheet_url') || '';
+  if (input) input.value = saved;
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeSheetUrlModal() {
+  var modal = document.getElementById('sheet-url-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveSheetUrl() {
+  var input = document.getElementById('sheet-url-input');
+  var url = input ? input.value.trim() : '';
+  if (!url) { alert('請輸入 Google Sheet 網址'); return; }
+  if (!url.startsWith('https://docs.google.com/spreadsheets/')) {
+    alert('網址格式不正確，請確認是 Google Sheets 的網址'); return;
+  }
+  localStorage.setItem('gsheet_url', url);
+  var link = document.getElementById('gsheet-link');
+  if (link) link.href = url;
+  closeSheetUrlModal();
+}
+
+// 點擊 modal 背景關閉
+document.getElementById('sheet-url-modal') && document.getElementById('sheet-url-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSheetUrlModal();
+});
 </script>
