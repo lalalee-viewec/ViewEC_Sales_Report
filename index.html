@@ -1436,6 +1436,10 @@ window.addEventListener('load', () => {
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" width="16" height="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           月營業額趨勢
         </div>
+        <div style="display:flex;gap:16px;align-items:center;font-size:12px;color:var(--gray-500);">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:3px;border-radius:2px;background:var(--blue);display:inline-block;"></span>實際營業額</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:3px;border-radius:2px;background:var(--orange);display:inline-block;"></span>含預計營業額</span>
+        </div>
       </div>
       <div style="position:relative;height:320px;" id="revenueChartWrap">
         <canvas id="revenueChart" role="img" aria-label="月營業額趨勢折線圖"></canvas>
@@ -1445,10 +1449,10 @@ window.addEventListener('load', () => {
     <div class="revenue-table-wrap">
       <table class="revenue-table">
         <thead>
-          <tr><th>月份</th><th style="text-align:right;">營業額</th></tr>
+          <tr><th>月份</th><th style="text-align:right;">實際營業額</th><th style="text-align:right;">預計營業額</th><th style="text-align:right;">合計</th></tr>
         </thead>
         <tbody id="revenueTableBody">
-          <tr><td colspan="2" class="revenue-loading">點選上方「↻ 重新整理」載入資料</td></tr>
+          <tr><td colspan="4" class="revenue-loading">點選上方「↻ 重新整理」載入資料</td></tr>
         </tbody>
       </table>
     </div>
@@ -1571,44 +1575,57 @@ function renderPipelineTable() {
   document.getElementById('pipelineTableBody').innerHTML = html;
 }
 
-// ==================== REVENUE ====================
-var REVENUE_URL = 'https://script.google.com/macros/s/AKfycbxdE7qNdCU2mHlUuJnIj0-BUgLLymp9D88VSaFMIlK4VRfl5GEjfpcDE1jqbX9nors/exec?sheet=revenue';
-var revenueData = [];
+// ==================== REVENUE（營業額 + 預計營業額 合併版） ====================
+var REVENUE_BASE = 'https://script.google.com/macros/s/AKfycbxdE7qNdCU2mHlUuJnIj0-BUgLLymp9D88VSaFMIlK4VRfl5GEjfpcDE1jqbX9nors/exec';
+var REVENUE_URL  = REVENUE_BASE + '?sheet=revenue';   // 營業額分頁
+var FORECAST_URL = REVENUE_BASE + '?sheet=預計營業額';  // 預計營業額分頁
+
+var revenueData  = [];   // 原始營業額：[{month, amount}]
+var forecastData = [];   // 原始預計營業額（多筆業務）：原始 row 陣列
+var combinedData = [];   // 合併後：[{month, actual, projected, total}]
 var revenueChartInstance = null;
 
 function loadRevenue() {
-  document.getElementById('revenueTableBody').innerHTML = '<tr><td colspan="2" class="revenue-loading">載入中…</td></tr>';
-  fetch(REVENUE_URL)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      revenueData = data.map(function(row) {
-        return {
-          month: row[0] ? formatMonth(row[0].v) : '',
-          amount: row[1] ? row[1].v : ''
-        };
-      }).filter(function(r) { return r.month && r.amount; });
-      renderRevenueStats();
-      renderRevenueChart();
-      renderRevenueTable();
-    })
-    .catch(function(e) {
-      document.getElementById('revenueTableBody').innerHTML =
-        '<tr><td colspan="2" class="revenue-error">載入失敗：' + e.message + '</td></tr>';
-    });
+  document.getElementById('revenueTableBody').innerHTML =
+    '<tr><td colspan="4" class="revenue-loading">載入中…</td></tr>';
+
+  var pRev = fetch(REVENUE_URL).then(function(r){ return r.json(); })
+    .catch(function(){ return []; });
+  // 預計營業額：抓不到也不讓整頁壞掉
+  var pFc  = fetch(FORECAST_URL).then(function(r){ return r.json(); })
+    .catch(function(){ return []; });
+
+  Promise.all([pRev, pFc]).then(function(res){
+    var rev = res[0] || [];
+    var fc  = res[1] || [];
+
+    revenueData = rev.map(function(row){
+      return { month: row[0] ? formatMonth(row[0].v) : '', amount: row[1] ? row[1].v : '' };
+    }).filter(function(r){ return r.month && r.amount !== '' && r.amount != null; });
+
+    forecastData = Array.isArray(fc) ? fc : [];
+
+    buildCombined();
+    renderRevenueStats();
+    renderRevenueChart();
+    renderRevenueTable();
+  }).catch(function(e){
+    document.getElementById('revenueTableBody').innerHTML =
+      '<tr><td colspan="4" class="revenue-error">載入失敗：' + e.message + '</td></tr>';
+  });
 }
 
 function formatMonth(str) {
-  if (!str) return '';
-  // If already in YYYY/MM format, return as-is
+  if (!str && str !== 0) return '';
+  str = String(str);
   if (/^\d{4}\/\d{2}$/.test(str.trim())) return str.trim();
-  // Try parsing as Date
   var d = new Date(str);
   if (!isNaN(d.getTime())) {
     var y = d.getFullYear();
     var m = String(d.getMonth() + 1).padStart(2, '0');
     return y + '/' + m;
   }
-  return str;
+  return str.trim();
 }
 
 function parseAmount(str) {
@@ -1619,45 +1636,143 @@ function formatAmount(num) {
   return 'NT$ ' + Math.round(num).toLocaleString('zh-TW');
 }
 
+// 把整數金額轉成精簡「萬」格式，給圖上標籤用
+function formatCompact(num) {
+  var v = num / 10000;
+  var s = (Math.abs(v) >= 100) ? v.toFixed(0) : v.toFixed(1);
+  return s + '萬';
+}
+
+// 把「預計營業額」分頁加總 → {月份: 預計總和}
+// 格式：A欄=時間(YYYY/MM), B欄=Tank, C欄=Jessica, D欄=Andy...（同一列橫向加總所有數字欄）
+// 第一列為標頭（時間/Tank/Jessica/Andy），自動跳過
+function aggregateForecast(rows) {
+  var map = {};
+  (rows || []).forEach(function(row, rowIdx){
+    if (!row || !row.length) return;
+    var month = formatMonth(row[0] ? row[0].v : '');
+    if (!month) return;  // 跳過標頭列（時間、空白列）
+    var total = 0;
+    // 從第 2 欄（index 1）開始，把所有欄的數字加總
+    for (var i = 1; i < row.length; i++) {
+      if (row[i] && row[i].v !== '' && row[i].v != null) {
+        total += parseAmount(row[i].v);
+      }
+    }
+    map[month] = (map[month] || 0) + total;
+  });
+  return map;
+}
+
+// 合併：每個月 total = 實際營業額 + 預計營業額加總
+function buildCombined() {
+  var fcMap = aggregateForecast(forecastData);
+  var actualMap = {};
+  revenueData.forEach(function(r){ actualMap[r.month] = parseAmount(r.amount); });
+
+  var months = revenueData.map(function(r){ return r.month; });
+  Object.keys(fcMap).forEach(function(m){ if (months.indexOf(m) === -1) months.push(m); });
+  months = months.filter(function(m){ return /^\d{4}\/\d{2}$/.test(m); });
+  months.sort(); // YYYY/MM 字串排序即為時間排序
+
+  combinedData = months.map(function(m){
+    var actual = actualMap[m] || 0;
+    var projected = fcMap[m] || 0;       // 預計營業額（可正可負）
+    return { month: m, actual: actual, projected: projected, total: actual + projected };
+  });
+}
+
+// 一個月若「預計營業額」非 0 → 屬橘色（含預計）；歸零後自動變藍色（純實際）
+function isProjected(d) { return d && Math.round(d.projected) !== 0; }
+
 function renderRevenueStats() {
-  if (!revenueData.length) return;
-  var last = revenueData[revenueData.length - 1];
-  var ytd = revenueData.reduce(function(s, r) { return s + parseAmount(r.amount); }, 0);
+  if (!combinedData.length) return;
+  var last = combinedData[combinedData.length - 1];
+  var ytd  = combinedData.reduce(function(s, d){ return s + d.total; }, 0);
+
   document.getElementById('rev-latest-month').textContent = last.month;
-  document.getElementById('rev-latest-amount').textContent = formatAmount(parseAmount(last.amount));
+
+  var amtEl = document.getElementById('rev-latest-amount');
+  amtEl.textContent = formatAmount(last.total) + (isProjected(last) ? '（含預計）' : '');
+  amtEl.classList.toggle('orange', isProjected(last));
+
   document.getElementById('rev-ytd').textContent = formatAmount(ytd);
 }
 
+// 固定把「加總數字」畫在每個點上方的自訂外掛（不需額外載入套件）
+var totalLabelPlugin = {
+  id: 'totalLabel',
+  afterDatasetsDraw: function(chart) {
+    var ctx = chart.ctx;
+    var meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data) return;
+    ctx.save();
+    ctx.font = '600 11px "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    meta.data.forEach(function(pt, i){
+      var d = combinedData[i];
+      if (!d) return;
+      ctx.fillStyle = isProjected(d) ? '#ea580c' : '#2563eb';
+      ctx.fillText(formatCompact(d.total), pt.x, pt.y - 8);
+    });
+    ctx.restore();
+  }
+};
+
 function renderRevenueChart() {
   if (revenueChartInstance) { revenueChartInstance.destroy(); }
-  var labels = revenueData.map(function(r) { return r.month; });
-  var values = revenueData.map(function(r) { return parseAmount(r.amount); });
+  var labels = combinedData.map(function(d){ return d.month; });
+  var values = combinedData.map(function(d){ return d.total; });
+
+  // 每個點的顏色：含預計→橘，純實際→藍
+  var pointColors = combinedData.map(function(d){
+    return isProjected(d) ? '#ea580c' : '#2563eb';
+  });
+
   var ctx = document.getElementById('revenueChart');
   revenueChartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: '營業額',
+        label: '營業額（含預計）',
         data: values,
         borderColor: '#2563eb',
-        backgroundColor: 'rgba(37,99,235,0.08)',
+        backgroundColor: 'rgba(37,99,235,0.06)',
         borderWidth: 2.5,
-        pointBackgroundColor: '#2563eb',
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
         pointRadius: 5,
         pointHoverRadius: 7,
         fill: true,
-        tension: 0.3
+        tension: 0.3,
+        // 線段著色：只要該段「終點」是含預計的月份，就畫橘線
+        segment: {
+          borderColor: function(c){
+            var d1 = combinedData[c.p1DataIndex];
+            return isProjected(d1) ? '#ea580c' : '#2563eb';
+          }
+        }
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { top: 24 } }, // 留空間給點上方的數字標籤
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: function(ctx) { return ' ' + formatAmount(ctx.raw); }
+            label: function(c){
+              var d = combinedData[c.dataIndex];
+              var lines = ['合計：' + formatAmount(d.total)];
+              lines.push('實際營業額：' + formatAmount(d.actual));
+              if (Math.round(d.projected) !== 0) {
+                lines.push('預計營業額：' + formatAmount(d.projected));
+              }
+              return lines;
+            }
           }
         }
       },
@@ -1667,20 +1782,31 @@ function renderRevenueChart() {
           grid: { color: '#f3f4f6' },
           ticks: {
             font: { size: 11 },
-            callback: function(v) { return 'NT$' + (v/10000).toFixed(0) + '萬'; }
+            callback: function(v){ return 'NT$' + (v/10000).toFixed(0) + '萬'; }
           }
         }
       }
-    }
+    },
+    plugins: [totalLabelPlugin]
   });
 }
 
 function renderRevenueTable() {
-  var rows = revenueData.slice().reverse();
+  var rows = combinedData.slice().reverse();
   var html = '';
-  rows.forEach(function(r) {
-    html += '<tr><td>' + r.month + '</td><td class="amount">' + formatAmount(parseAmount(r.amount)) + '</td></tr>';
+  rows.forEach(function(d){
+    var projTxt = (Math.round(d.projected) !== 0)
+      ? '<span style="color:var(--orange);font-weight:600;">' + formatAmount(d.projected) + '</span>'
+      : '<span style="color:var(--gray-300);">—</span>';
+    var totalColor = isProjected(d) ? 'var(--orange)' : 'var(--blue)';
+    html += '<tr>' +
+      '<td>' + d.month + (isProjected(d) ? ' <span style="font-size:11px;color:var(--orange);">●含預計</span>' : '') + '</td>' +
+      '<td class="amount" style="color:var(--blue);">' + formatAmount(d.actual) + '</td>' +
+      '<td class="amount">' + projTxt + '</td>' +
+      '<td class="amount" style="color:' + totalColor + ';">' + formatAmount(d.total) + '</td>' +
+    '</tr>';
   });
-  document.getElementById('revenueTableBody').innerHTML = html || '<tr><td colspan="2" style="text-align:center;color:var(--gray-300);">無資料</td></tr>';
+  document.getElementById('revenueTableBody').innerHTML =
+    html || '<tr><td colspan="4" style="text-align:center;color:var(--gray-300);">無資料</td></tr>';
 }
 </script>
