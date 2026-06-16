@@ -1413,7 +1413,7 @@ window.addEventListener('load', () => {
         每月營業額
       </span>
       <div style="display:flex;gap:8px;align-items:center;">
-        <a id="gsheet-link" href="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit" target="_blank"
+        <a id="gsheet-link" href="https://docs.google.com/spreadsheets/d/13frUbgp6G8glvwqC5UpxAAj3cPmRedytdp91SspIlx8/edit" target="_blank"
            style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:500;color:#14532d;background:#dcfce7;border:1px solid #86efac;border-radius:6px;text-decoration:none;"
            onmouseover="this.style.background='#bbf7d0'" onmouseout="this.style.background='#dcfce7'">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1645,14 +1645,14 @@ function loadRevenue() {
 
     // 營業額：第 1 欄=月份, 第 2 欄=金額，跳過標頭列
     revenueData = revRows.filter(function(r, i) {
-      return i > 0 && r[0] && r[1] && formatMonth(r[0]);
+      return r[0] && r[1] && formatMonth(r[0]);
     }).map(function(r) {
       return { month: formatMonth(r[0]), amount: r[1] };
     }).filter(function(r) { return r.month; });
 
     // 預計營業額：第 1 欄=時間, 其餘欄=各業務金額，跳過標頭列（時間/Tank/Jessica/Andy）
     forecastData = fcRows.filter(function(r, i) {
-      return i > 0 && r[0] && formatMonth(r[0]);
+      return r[0] && formatMonth(r[0]);
     });
 
     buildCombined();
