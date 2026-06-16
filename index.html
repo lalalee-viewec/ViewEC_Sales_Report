@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -1437,14 +1437,6 @@ window.addEventListener('load', () => {
         <button class="revenue-refresh-btn" onclick="loadRevenue()">↻ 重新整理</button>
       </div>
     </div>
-    <div id="rev-debug" style="display:none;background:#1e293b;color:#94a3b8;border-radius:8px;padding:14px 18px;font-size:11px;font-family:monospace;margin-bottom:16px;line-height:1.7;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="color:#f1f5f9;font-weight:600;">Debug：API 回傳原始資料</span>
-        <button onclick="document.getElementById('rev-debug').style.display='none'" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;">X 關閉</button>
-      </div>
-      <div id="rev-debug-content"></div>
-    </div>
-
     <div class="revenue-stats">
       <div class="revenue-stat-card">
         <div class="revenue-stat-label">最新月份</div>
@@ -1639,10 +1631,6 @@ var revenueChartInstance = null;
 function loadRevenue() {
   document.getElementById('revenueTableBody').innerHTML =
     '<tr><td colspan="4" class="revenue-loading">載入中…</td></tr>';
-  // 隱藏上次的 debug
-  var dbg = document.getElementById('rev-debug');
-  if (dbg) { dbg.style.display = 'none'; document.getElementById('rev-debug-content').innerHTML = ''; }
-
   var pRev = fetch(sheetsCSV(REVENUE_GID))
     .then(function(r) { return r.text(); })
     .catch(function() { return ''; });
