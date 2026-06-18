@@ -194,6 +194,12 @@
   .revenue-loading { text-align: center; padding: 40px; color: var(--gray-400); font-size: 14px; }
   .revenue-error { text-align: center; padding: 40px; color: var(--orange); font-size: 13px; }
 
+
+  /* ===== LEADS ===== */
+  .leads-stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; margin-bottom:20px; }
+  .leads-stat-card { background:var(--white); border:1px solid var(--gray-200); border-radius:10px; padding:16px 20px; }
+  .leads-stat-label { font-size:12px; color:var(--gray-400); margin-bottom:6px; }
+  .leads-stat-value { font-size:22px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -223,10 +229,11 @@
         <option value="2026/05/22">2026/05/22</option>
         <option value="2026/05/29">2026/05/29</option>
         <option value="2026/06/05">2026/06/05</option>
-        <option value="2026/06/12" selected>2026/06/12</option>
+        <option value="2026/06/12">2026/06/12</option>
+        <option value="2026/06/18" selected>2026/06/18</option>
       </select>
     </div>
-    <div class="last-update" id="lastUpdateLabel">最後更新日期：2026/06/12</div>
+    <div class="last-update" id="lastUpdateLabel">最後更新日期：2026/06/18</div>
   </div>
 </div>
 
@@ -234,6 +241,7 @@
 <!-- PAGE NAV -->
 <div class="page-nav">
   <button class="page-nav-btn active" onclick="switchPage('weekly', this)">📊 效能週報</button>
+  <button class="page-nav-btn" onclick="switchPage('leads', this)">📋 其他名單開發追蹤</button>
   <button class="page-nav-btn" onclick="switchPage('pipeline', this)">📈 Sales Pipeline</button>
   <button class="page-nav-btn" onclick="switchPage('revenue', this)">💰 每月營業額</button>
 </div>
@@ -427,6 +435,251 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- LEADS PAGE -->
+<div id="page-leads" class="page-section" style="display:none;">
+<div class="main">
+
+  <!-- 週次選擇 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <select id="leads-week-sel" onchange="switchLeadsWeek(this.value)"
+        style="border:1px solid var(--gray-200);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--gray-700);background:var(--white);font-weight:500;cursor:pointer;outline:none;">
+        <option value="2026/06/18">週次：2026/06/18</option>
+      </select>
+      <span style="font-size:12px;color:var(--gray-400);">最後更新日：<strong id="leads-last-update" style="color:var(--gray-600);">2026/06/18</strong></span>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    核心績效指標
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-label">總名單數</div>
+      <div class="kpi-number">84</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">未接觸</div>
+      <div class="kpi-number">30</div>
+      <div class="kpi-pct">35.7%</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">已接觸未開會</div>
+      <div class="kpi-number">44</div>
+      <div class="kpi-pct">52.4%</div>
+    </div>
+    <div class="kpi-card green" onclick="toggleLeadsMet()">
+      <div class="kpi-label">已開會</div>
+      <div class="kpi-number">10</div>
+      <div class="kpi-pct">11.9%</div>
+      <button class="kpi-expand-btn" id="leadsMetBtn">▼ 展開</button>
+    </div>
+  </div>
+
+  <!-- 已開會展開 -->
+  <div class="meeting-detail" id="leadsMetDetail">
+    <div class="meeting-detail-header">
+      <div class="meeting-detail-title">已開會名單明細</div>
+      <div class="meeting-detail-count">10 筆</div>
+    </div>
+    <div class="filter-row">
+      <input type="text" id="l-met-search" placeholder="搜尋客戶名稱..." oninput="filterLeadsMet()">
+      <select id="l-met-sales" onchange="filterLeadsMet()">
+        <option value="">全部業務</option>
+        <option>Stacy</option><option>Tank</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--gray-200);border-radius:10px;background:var(--white);margin-bottom:24px;">
+      <table class="detail-table">
+        <thead><tr>
+          <th>分配日期</th><th>客戶名稱</th><th>來源類型</th><th>新客/老客</th>
+          <th>業務</th><th>開會日期</th><th>接觸狀態</th><th>狀況</th><th>備註</th>
+        </tr></thead>
+        <tbody id="leadsMetBody"><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">普洱張實業有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-new">新客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/06</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">已收到回覆,約會議,內部再討論</td>
+      <td style="font-size:11px;color:var(--gray-400);">無合作</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">丸文調理食品有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-new">新客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Tank</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/30</td>
+      <td class="contact-status">二次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/25 想知道預期成效,先評估一下會再約 3/26約3/30會議,想做JP TK 4/10討論成本/售價結構 5/28…</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">浤鑫股份有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-new">新客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/10</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">已收到回覆,約會議,內部再討論</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">弘康國際股份有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/09</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/13 尚未評估 已收到回覆,約會議,內部再討論</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">彤旺食品有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/23</td>
+      <td class="contact-status">二次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/23 會議</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案 NETSEA 專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">建邑國際行銷股份有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/11</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">預算不足,無需求</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">舜濱生技農場股份有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/19</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/19 因為樂天銷量普通,還需要評估 已發Line</td>
+      <td style="font-size:11px;color:var(--gray-400);">GOT 維運中</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">新鳳鳴茶業有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/23</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/23 會議 ,週五要出國到英國,最快四月中才有空評估</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案 NETSEA 專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2026/03/03</td>
+      <td style="font-weight:500;">毅森國際股份有限公司</td>
+      <td style="font-size:11px;">數商樂天</td>
+      <td><span class="badge-old">老客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Stacy</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/03/17</td>
+      <td class="contact-status">二次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">3/17 因為不是自己的品牌,如果要做的話希望可以用買斷的方式</td>
+      <td style="font-size:11px;color:var(--gray-400);">2025 數商專案</td>
+    </tr><tr>
+      <td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">2025/12/12</td>
+      <td style="font-weight:500;">締沅科技股份有限公司</td>
+      <td style="font-size:11px;">Meta投廣</td>
+      <td><span class="badge-new">新客</span></td>
+      <td style="color:var(--blue);font-weight:500;">Tank</td>
+      <td style="font-size:11px;white-space:nowrap;">2026/02/03</td>
+      <td class="contact-status">首次｜已回應</td>
+      <td style="font-size:11px;max-width:200px;">12/12發信；12/12加line群 1/27約2/3會議；2/10、2/23關心無回覆 3/2提供JWAY TK影片…</td>
+      <td style="font-size:11px;color:var(--gray-400);"></td>
+    </tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 諮詢師名單開發 -->
+  <div style="background:var(--white);border-radius:12px;border:1px solid var(--gray-200);padding:20px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:600;color:var(--gray-800);">諮詢師名單開發</div>
+      <span style="font-size:12px;color:var(--gray-400);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;padding:4px 10px;">共 2 位諮詢師</span>
+    </div>
+    <table class="perf-table">
+      <thead><tr>
+        <th>諮詢師</th><th>分配數量（所有來源）</th><th>接觸數</th>
+        <th>接觸率</th><th>已開會</th><th>開會率</th>
+      </tr></thead>
+      <tbody><tr>
+      <td><span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;display:inline-block;"></span><span style="font-weight:500">Stacy</span></span></td>
+      <td>82</td><td>52</td>
+      <td><span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">63.4%</span></td>
+      <td>8</td>
+      <td style="color:var(--green);font-weight:600;">9.8%</td>
+    </tr><tr>
+      <td><span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0;display:inline-block;"></span><span style="font-weight:500">Tank</span></span></td>
+      <td>2</td><td>2</td>
+      <td><span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">100.0%</span></td>
+      <td>2</td>
+      <td style="color:var(--green);font-weight:600;">100.0%</td>
+    </tr><tr style="font-weight:600;border-top:1px solid var(--gray-200);">
+  <td style="padding-top:10px;">Total</td>
+  <td style="padding-top:10px;">84</td>
+  <td style="padding-top:10px;">54</td>
+  <td style="padding-top:10px;">64.3%</td>
+  <td style="padding-top:10px;">10</td>
+  <td style="padding-top:10px;">11.9%</td>
+</tr></tbody>
+    </table>
+  </div>
+
+  <!-- 深度分析 -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    深度分析
+  </div>
+
+  <div class="analysis-card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchLeadsTab('src', this)">名單來源</button>
+      <button class="tab-btn" onclick="switchLeadsTab('reason', this)">未接觸原因</button>
+    </div>
+
+    <!-- Tab 1: 名單來源 -->
+    <div class="tab-content active" id="leads-tab-src">
+      <div class="two-col">
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot dot-blue"></span>名單來源分布（共 84 筆）</div>
+          <div style="position:relative;height:200px;"><canvas id="leadsChartSrc"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-box-title"><span class="dot dot-green"></span>來源開會率比較</div>
+          <div style="position:relative;height:200px;"><canvas id="leadsChartSrcMet"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 未接觸原因 -->
+    <div class="tab-content" id="leads-tab-reason">
+      <div class="chart-box">
+        <div class="chart-box-title"><span class="dot dot-orange"></span>未接觸／未開會原因分布</div>
+        <div class="chart-stats-layout">
+          <div style="position:relative;" id="leadsReasonWrap">
+            <canvas id="leadsChartReason"></canvas>
+          </div>
+          <div class="stat-pills" id="leadsReasonStats"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 </div>
 
 <script>
@@ -1112,6 +1365,99 @@ const WEEKS = {
       { allocDate: "2026/01/05", client: "一芝軒企業有限公司", source: "來電", type: "新客", sales: "Stacy", meetDate: "2026/01/08", contactStatus: "首次｜已回應", status: "", note: "" },
     ],
   },
+  "2026/06/18": {
+    lastUpdate: "2026/06/18",
+    kpi: { total: 1063, untouched: 693, contacted: 309, met: 61 },
+    table7d: [
+      { name: "Jessica", alloc: 3,  touch: 0, touchRate: "0.0%",  meet: 0, meetRate: "0.0%"  },
+      { name: "Andy",    alloc: 6,  touch: 4, touchRate: "66.7%", meet: 3, meetRate: "50.0%" },
+      { name: "Tank",    alloc: 1,  touch: 1, touchRate: "100.0%",meet: 1, meetRate: "100.0%"},
+    ],
+    table14d: [
+      { name: "Jessica", alloc: 11, touch: 5, touchRate: "45.5%", meet: 1, meetRate: "9.1%"  },
+      { name: "Andy",    alloc: 6,  touch: 4, touchRate: "66.7%", meet: 3, meetRate: "50.0%" },
+      { name: "Tank",    alloc: 11, touch: 3, touchRate: "27.3%", meet: 1, meetRate: "9.1%"  },
+    ],
+    tableYTD: [
+      { name: "Jessica", alloc: 395, touch: 118, touchRate: "29.9%", meet: 25, meetRate: "6.3%"  },
+      { name: "Andy",    alloc: 6,   touch: 4,   touchRate: "66.7%", meet: 3,  meetRate: "50.0%" },
+      { name: "Stacy",   alloc: 110, touch: 77,  touchRate: "70.0%", meet: 13, meetRate: "11.8%" },
+      { name: "Tank",    alloc: 552, touch: 169, touchRate: "30.6%", meet: 20, meetRate: "3.6%"  },
+    ],
+    sourceAll: { "活動": 537, "Meta投廣": 261, "官網": 225, "官方line": 24, "來電": 8, "信箱": 4, "轉介": 2, "陌開": 0, "既存擴大": 0 },
+    sourceMet: { "官網": 22, "活動": 15, "Meta投廣": 10, "官方line": 7, "來電": 3, "信箱": 1, "轉介": 2 },
+    untouchedReasons: { "無回覆": 640, "未接": 122, "掛電話": 15, "資訊不足": 8, "時間未到": 18, "其他": 20 },
+    nometReasons: { "無需求": 87, "評估中": 62, "不合適": 24, "窗口忙碌待聯繫": 19, "其他": 20, "時間未到": 18, "預算不足": 6, "已有合作夥伴": 8, "放鳥": 3, "資訊不足": 8 },
+    productDist: { "食品（含保健食品）": 6, "美妝與個人護理": 4, "食品": 4, "寵物用品": 3, "家居用品": 4, "服飾配件類": 2, "汽配用品": 2, "消費電子與配件": 1, "耳機": 1, "Mini PC": 1, "五金手工具": 1, "其他": 1, "保養品": 1, "五金": 1, "零食": 1, "防霉技術": 1, "藝人周邊": 1, "工業科研用品": 1, "茶葉": 1, "水性護木油": 1, "水晶(風水)": 1, "嬰兒肌膚保養品": 1, "汽車零件": 1, "bb槍": 1 },
+    demandDist: { "亞馬遜代營運": 18, "TikTok/TikTok Shop 台灣館": 7, "站外網紅行銷(KOL/KOC 影片拍攝)": 6, "其他": 3, "完全沒有外銷經驗": 1, "Amazon、Walmart、Shopify": 1, "TikTOK": 1, "自架官網諮詢": 1, "TikTok": 1, "日本樂天/亞馬遜": 1 },
+    progressData: [
+      { status: "Approach",      count: 20, note: "" },
+      { status: "Proposal",      count: 16, note: "" },
+      { status: "Cold Storage",  count: 4,  note: "" },
+      { status: "Lost",          count: 3,  note: "" },
+      { status: "Prospecting",   count: 3,  note: "" },
+      { status: "Disappearance", count: 3,  note: "" },
+      { status: "Commit",        count: 1,  note: "" },
+      { status: "Closing",       count: 1,  note: "" },
+      { status: "Coverage",      count: 1,  note: "" },
+    ],
+    meetingRows: [
+      { allocDate: "2026/06/09", client: "淡果香", source: "官方line", type: "新客", sales: "Jessica", meetDate: "2026/06/17", contactStatus: "首次｜已回應", status: "已聯繫上並約下週會議", note: "" },
+      { allocDate: "2026/06/01", client: "盈寶寵物股份有限公司", source: "官方line", type: "新客", sales: "Jessica", meetDate: "2026/06/12", contactStatus: "首次｜已回應", status: "6/4電話會議\n會議時間暫定6/12", note: "" },
+      { allocDate: "2026/05/19", client: "英屬維京群島商禾寶醫療器材股份有限公司台灣分公司", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/05/12", contactStatus: "首次｜未回應", status: "5/25發信", note: "" },
+      { allocDate: "2026/05/12", client: "美拓開發工業股份有限公司", source: "轉介", type: "新客", sales: "Tank", meetDate: "2026/05/14", contactStatus: "首次｜已回應", status: "5/13電聯加LINE拉群\n5/14會議 表示正在跟其他服務商合作\n預計年底換服務商", note: "" },
+      { allocDate: "2026/05/12", client: "允安國際有限公司", source: "官網", type: "老客", sales: "Jessica", meetDate: "", contactStatus: "首次｜已回應", status: "之前開過會\n再次line聯繫\n6/2很忙無法時間會議有空再聯繫", note: "" },
+      { allocDate: "2026/05/06", client: "富祐鴻科技股份有限公司", source: "活動", type: "老客", sales: "Tank", meetDate: "2026/05/08", contactStatus: "首次｜已回應", status: "2025/12/26會議過\n5/6主動來訊約5/8會議\n5/8提供合約\n5/11針對合約提問題,已回覆,內部討論中\n5/27表示公司高層選擇其他服務商", note: "2025日本全通路說明會" },
+      { allocDate: "2026/05/06", client: "傑萌生技股份有限公司", source: "專案組", type: "老客", sales: "Tank", meetDate: "2026/05/06", contactStatus: "首次｜已回應", status: "去年參加過專案\n主動來詢問今年專案", note: "2025A Amazon AI專案" },
+      { allocDate: "2026/05/08", client: "寶諭國際有限公司", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/05/07", contactStatus: "首次｜已回應", status: "同步評估其他家方案，確認執行會再聯繫\n產品還在改良開發，後續會再聯絡", note: "2604博覽會名片" },
+      { allocDate: "2026/05/08", client: "STAR BEAUTY 雲巖科技", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/05/28", contactStatus: "首次｜已回應", status: "內部針對方案討論中\n5/28拜訪\n6/4未回", note: "2604博覽會名片" },
+      { allocDate: "2026/05/08", client: "馬拿西有限公司", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/05/07", contactStatus: "首次｜已回應", status: "4/29現場諮詢後加line\n5/8線上會議\n5/13line跟進未決定方案", note: "2604博覽會seller café" },
+      { allocDate: "2026/05/08", client: "TNP", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/05/11", contactStatus: "首次｜已回應", status: "4/29現場諮詢後加line\n5/11詢問亞馬遜專案內容", note: "2604博覽會seller café" },
+      { allocDate: "2026/04/28", client: "IWS International Corp. Ltd.", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/05/06", contactStatus: "二次｜已回應", status: "4/28發信\n4/28 電聯 後續約會議\n加line\n5/5聯繫,約5/6會議\n會議後評估中\n5/15關心無回覆", note: "" },
+      { allocDate: "2026/04/23", client: "威盛科技", source: "轉介", type: "新客", sales: "Tank", meetDate: "2026/04/23", contactStatus: "首次｜已回應", status: "Ding Go執行長轉介\n會後內部討論中\n5/5關心表示內部還在討論\n後續提供亞馬遜詳細資料\n但可能因廣告費高,不想花錢做", note: "" },
+      { allocDate: "2026/04/21", client: "寶工實業股份有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/05/19", contactStatus: "二次｜已回應", status: "4/24發信\n5/8line 確認拜訪時間", note: "" },
+      { allocDate: "2026/04/21", client: "MEANCO", source: "官網", type: "老客", sales: "Jessica", meetDate: "2026/05/06", contactStatus: "二次｜已回應", status: "4/24訊息聯繫\n5/6線上會議，窗口與老闆確認是否合作執行", note: "之前詢問過亞馬遜代營運" },
+      { allocDate: "2026/04/17", client: "海上星星股份有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/22", contactStatus: "首次｜已回應", status: "4/17發信\n4/22會議表示要做台灣官網\n未來或許能合作JP TK", note: "" },
+      { allocDate: "2026/04/15", client: "安德魯紳有限公司", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/23", contactStatus: "首次｜已回應", status: "4/15發信,推JP TK\n4/21主動來電,加line拉群,提拱Amz簡報\n4/23會議表示Q4才會準備好產品", note: "2026東京食品展" },
+      { allocDate: "2026/04/15", client: "長城料理實業有限公司", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/22", contactStatus: "二次｜已回應", status: "4/15發信,推JP TK\n4/22合約內部用印流程", note: "2026東京食品展" },
+      { allocDate: "2026/04/08", client: "Shh", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/10", contactStatus: "首次｜已回應", status: "4/8發信,回信加LINE約會議\n會議後評估中\n5/15關心,表示內部籌備中", note: "" },
+      { allocDate: "2026/04/08", client: "百映", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/05/15", contactStatus: "二次｜已回應", status: "4/8發信\n4/28電聯加line\n4/29約5/15會議\n聽起來非常小白,表示需與執行長內部討論", note: "" },
+      { allocDate: "2026/03/30", client: "田榮股份有限公司", source: "Meta投廣", type: "新客", sales: "Tank", meetDate: "2026/04/13", contactStatus: "二次｜已回應", status: "3/30發信\n4/10電聯加line約會議\n4/13會議覺得太花錢\n4/20關心無回覆", note: "" },
+      { allocDate: "2026/03/27", client: "艾葳國際美麗股份有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/04/27", contactStatus: "二次｜已回應", status: "3/23發信\n3/30電聯未接\n4/10電聯未接\n4/23主動來電,加LINE 拉群\n4/27會議後評估TK上架\n5/8提供KOL 直播資源,內部討論中\n至今無回覆,可能不想花錢做", note: "" },
+      { allocDate: "2026/03/24", client: "Iceman Society", source: "官方line", type: "新客", sales: "Tank", meetDate: "2026/03/31", contactStatus: "首次｜已回應", status: "3/24發信；3/25加line拉群\n3/31會議；4/9提供官網報價,無回覆", note: "" },
+      { allocDate: "2026/03/19", client: "森水國際有限公司", source: "官方line", type: "老客", sales: "Tank", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "已開立美國站，尚未上架\n3/20開會,3/24回覆窗口問題\n3/30、4/8、5/22關心無進展", note: "2024已開過會；202512再次詢問" },
+      { allocDate: "2026/03/18", client: "捷貿興業有限公司", source: "來電", type: "新客", sales: "Tank", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "3/18發信.加LINE\n3/20開會\n4/9拜訪,內部討論中\n5/8選擇回去給美國經銷商操作", note: "" },
+      { allocDate: "2026/03/18", client: "私廚房", source: "活動", type: "新客", sales: "Tank", meetDate: "2026/04/07", contactStatus: "首次｜已回應", status: "3/18發信\n4/1窗口主動致電加line\n4/7拜訪推JP TK；窗口後續須跟合夥人討論\n4/15回覆不做", note: "" },
+      { allocDate: "2026/03/18", client: "盛菱國際有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/04/01", contactStatus: "首次｜已回應", status: "3/18發信\n4/1會議，後續報價不讀不回", note: "" },
+      { allocDate: "2026/03/09", client: "康鮮國際股份有限公司", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/03/17", contactStatus: "首次｜已回應", status: "3/12 想了解tk服務\n3/9 mail", note: "" },
+      { allocDate: "2026/03/06", client: "優克美科技股份有限公司", source: "來電", type: "老客", sales: "Jessica", meetDate: "2026/03/10", contactStatus: "首次｜已回應", status: "3/6約3/10上午會議\n無提供串接工具服務", note: "" },
+      { allocDate: "2026/03/05", client: "傳淇企業有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/03/24", contactStatus: "首次｜已回應", status: "3/5下午接通,約3/24下午會議\n後續不讀不回", note: "有做Ebay AMZ，新品,人力問題\n希望前期代營運服務,後面自己做" },
+      { allocDate: "2026/03/03", client: "澄和科技", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/20", contactStatus: "首次｜已回應", status: "3/3約3/20下午會議", note: "想多方面了解通路適不適合做" },
+      { allocDate: "2026/03/03", client: "起站科技有限公司", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/03/10", contactStatus: "首次｜已回應", status: "3/4 私密噴霧,長照舒緩噴霧\n3/3 mail", note: "" },
+      { allocDate: "2026/03/02", client: "風群股份有限公司", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/13", contactStatus: "首次｜已回應", status: "3/3 約3/13下午14:30會議\n3/2 明天下午15:00回撥", note: "" },
+      { allocDate: "2026/02/23", client: "街聲", source: "官方line", type: "新客", sales: "Jessica", meetDate: "2026/03/19", contactStatus: "首次｜已回應", status: "2/24已邀約會議3/19下午拜訪\n2/23下午未接", note: "" },
+      { allocDate: "2026/02/01", client: "家庭雲端", source: "活動", type: "老客", sales: "Stacy", meetDate: "2026/02/25", contactStatus: "首次｜已回應", status: "2/25 說明TK JP方案", note: "" },
+      { allocDate: "2026/02/13", client: "漢唐科技", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/02/26", contactStatus: "首次｜已回應", status: "2/26 想要做B2B\n2/13 mail", note: "" },
+      { allocDate: "2026/02/10", client: "比德堡實業有限公司", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/03/04", contactStatus: "二次｜已回應", status: "2/10 mail 2/12 年後約會議", note: "" },
+      { allocDate: "2026/02/10", client: "饌元股份有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/04/09", contactStatus: "首次｜已回應", status: "改約4/16拜訪\n3/9約拜訪4/9下午14:00\n2/26多次聯繫未果，今日才回覆，3/2當週會與我聯繫\n2/13已加Line聯繫，會議暫定3月中", note: "去年有聽過亞馬遜官方講座，沒有FDA證明" },
+      { allocDate: "2026/01/29", client: "睿森實業有限公司", source: "官網", type: "新客", sales: "Tank", meetDate: "2026/03/10", contactStatus: "二次｜已回應", status: "1/29發信\n2/4電聯加line,預計年後約會議\n2/10提供JP TK服務參考\n3/5 line群關心,已約3/10會議\n會議後評估中,暫無回覆\n5/22關心無回覆", note: "產品:生活用品\n目標:AMZ JP；同時詢問eBay" },
+      { allocDate: "2026/01/22", client: "曼妙思", source: "官網", type: "新客", sales: "Stacy", meetDate: "", contactStatus: "二次｜已回應", status: "2/5 會議 目前帳號開啟,等候美國商標\n1/22 mail", note: "" },
+      { allocDate: "2026/01/22", client: "奕瑪國際", source: "官網", type: "新客", sales: "Stacy", meetDate: "2026/01/29", contactStatus: "首次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/22", client: "LING CHA", source: "活動", type: "新客", sales: "Jessica", meetDate: "2026/03/12", contactStatus: "二次｜已回應", status: "2/26已約3/12會議\n1/23上午未接，已發信件\n1/21已加Line，未回應", note: "" },
+      { allocDate: "2026/01/22", client: "台灣先柏油漆廠有限公司", source: "活動", type: "新客", sales: "Stacy", meetDate: "2026/02/04", contactStatus: "首次｜已回應", status: "2/4會議\n1/22 mail", note: "" },
+      { allocDate: "2026/01/22", client: "金方舟國際有限公司", source: "活動", type: "新客", sales: "Stacy", meetDate: "", contactStatus: "首次｜已回應", status: "1/22 因成分含有乳製品,等候金匯確認回覆", note: "" },
+      { allocDate: "2026/01/15", client: "台灣威力綠能股份有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/02/05", contactStatus: "二次｜已回應", status: "3/3已給報價單,要瞭解規劃預估成效(營運給)\n2/25聯繫下禮拜會提交報價單\n1/20預約2/5會議提案", note: "" },
+      { allocDate: "2026/01/15", client: "安可有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/02/02", contactStatus: "二次｜已回應", status: "2/2會議過程已知預算不足，後續不讀不回\n2/2已約會議提案", note: "" },
+      { allocDate: "2026/01/14", client: "博太生醫", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/03/03", contactStatus: "二次｜已回應", status: "3/3會在約二次會討論前期投入成本\n2/10 約3/3會議\n2/4公司內部調動，想了解代操及流程\n1/30下午回信，會議邀約中", note: "" },
+      { allocDate: "2026/01/12", client: "芙亞國際", source: "信箱", type: "新客", sales: "Tank", meetDate: "2026/02/02", contactStatus: "首次｜已回應", status: "已約2/2開會\n2/10加LINE\n已選擇其他代營運", note: "" },
+      { allocDate: "2026/01/09", client: "宸穩生技", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/01/20", contactStatus: "首次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/09", client: "聯盛速配國際貿易有限公司", source: "Meta投廣", type: "新客", sales: "Jessica", meetDate: "2026/02/10", contactStatus: "首次｜已回應", status: "2/26主動回覆內部考量，先暫停\n2/5已約2/10會議提案\n1/22未接", note: "內部人員因素，提出先暫緩，明年再繼續" },
+      { allocDate: "2026/01/09", client: "合同会社 Torus", source: "Meta投廣", type: "新客", sales: "Stacy", meetDate: "2026/01/28", contactStatus: "二次｜已回應", status: "", note: "" },
+      { allocDate: "2026/01/08", client: "Partslinq", source: "官方line", type: "新客", sales: "Stacy", meetDate: "2026/03/16", contactStatus: "首次｜已回應", status: "帳號封閉無法解", note: "" },
+      { allocDate: "2026/01/07", client: "榮記洋行有限公司", source: "官網", type: "新客", sales: "Jessica", meetDate: "2026/01/29", contactStatus: "首次｜已回應", status: "2/23提案考慮中\n已約會議提案", note: "" },
+      { allocDate: "2026/01/05", client: "一芝軒企業有限公司", source: "來電", type: "新客", sales: "Stacy", meetDate: "2026/01/08", contactStatus: "首次｜已回應", status: "", note: "" },
+    ],
+  },
 };
 
 // ==================== CHART INSTANCES ====================
@@ -1489,6 +1835,7 @@ function switchPage(name, el) {
   el.classList.add('active');
   document.getElementById('page-' + name).classList.add('active');
   if (name === 'pipeline' && pipelineData.length === 0) loadPipeline();
+  if (name === 'leads') initLeads();
   if (name === 'revenue' && revenueData.length === 0) loadRevenue();
 }
 
@@ -1889,4 +2236,159 @@ function saveSheetUrl() {
 document.getElementById('sheet-url-modal') && document.getElementById('sheet-url-modal').addEventListener('click', function(e) {
   if (e.target === this) closeSheetUrlModal();
 });
+
+// ==================== LEADS ====================
+var LEADS_RAW = [{"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "氣球", "contact": "Sandy", "client": "大倫氣球工業股份有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "3/19 無需求", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "陶瓷、茶葉、文創禮品", "contact": "袁維瑞's", "client": "中州全球商業有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "N", "meetDate": "", "progress": "Approach", "situation": "3/23 mail 進一步了解進度", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "穀物類", "contact": "林姵諭", "client": "元豪食品有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 有提供給主管評估了", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "陳小姐\n( Monica Chen_CC)", "client": "台美壓克力股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 分機無人接聽", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "台灣烏龍茶三角茶包", "contact": "高聖婷", "client": "台祥茶業有限公司\n( 金南昌企業有限公司)", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 再寄一次", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "美妝保養品：面膜、沐浴露", "contact": "蔡佩真", "client": "安婕絲國際有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "低雞精", "contact": "郭旭英", "client": "有心事業股份有限公司", "status": "二次｜已回應", "noMeet": "預算不足", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 沒做日本市場,若需要額外花費無需求\n但如果是補助案需要廠商,很樂意加入", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "健康食品", "contact": "程潔絲", "client": "美鉌草本國際有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "背包", "contact": "邱裕玲", "client": "振佑國際企業有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "衞浴家居用品", "contact": "沈翠雲", "client": "時代木有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 有再樂天台灣館(台灣樂天的) 上架,需要再評估一下tiktok shop", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "果醬、水果氣泡麥汁", "contact": "游子昂", "client": "格外農品股份有限公司", "status": "二次｜未回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "紙餐盒", "contact": "楊沅婕", "client": "神好包裝有限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "紫玉茶OPC", "contact": "陳韻華", "client": "普洱張實業有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/06", "progress": "Proposal", "situation": "已收到回覆,約會議,內部再討論", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "伴手禮", "contact": "吳婉鈴", "client": "頑菓創意有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 先知道費用再來評估", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "食品", "contact": "許惠斐", "client": "富和國際企業有限公司", "status": "首次｜已回應", "noMeet": "預算不足", "meeting": "N", "meetDate": "", "progress": "", "situation": "預算不足", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉", "contact": "劉玳彤", "client": "滿溢茶坊有限公司", "status": "首次｜已回應", "noMeet": "預算不足", "meeting": "N", "meetDate": "", "progress": "", "situation": "預算不足", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "衛生棉、營養食品", "contact": "Emma", "client": "漢泰生醫科技股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "成衣", "contact": "林義桐", "client": "德妮股份有限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "大豆植物蛋白飲與大豆植物蛋白餅乾", "contact": "李依柔 (離職了)", "client": "樂維根有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 聯絡窗口離職", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "黃秋芬", "client": "福記冷凍食品股份有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "N", "meetDate": "", "progress": "Approach", "situation": "3/23 因為之前銷售不是很好,評估中", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "何先生 Mr. Ho (主管)", "client": "應億企業有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉", "contact": "吳光惠", "client": "薩谷德國際事業有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 會再看一下信箱", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "MyGuardian Care, MyGuardian Home. \n(Automatic Fall Detection and Alert pendant device)", "contact": "林芳玲", "client": "瀚微科技股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "無合作"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "(3C連接線、插座等)\n1. 3C Products Relate Connectors and Cable Assemblies\n2. AC/DC Charging Device and Cable Assemblies\n3. AI Industry relative ICR,OCR Water/Dust Proof Connectors and Cables Assemblies", "contact": "Johnson Chen\n陳煙梅", "client": "Unemac Products Inc.\n(裕甯實業股份有限公司)", "status": "二次｜已回應", "noMeet": "其他", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 會再看信件,研究一下", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Tank", "product": "旗魚鬆", "contact": "曹儷馨", "client": "丸文調理食品有限公司\nWANWEN FOOD PROCESSING INDUSTRY CO.,LTD", "status": "二次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/30", "progress": "", "situation": "3/25 想知道預期成效,先評估一下會再約\n3/26約3/30會議,想做JP TK\n4/10討論成本/售價結構\n5/28討論行銷影片腳本\n6/10取得中衛-產業發展計畫補助\n合約內容確認中", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "甲殼素抗菌紗布系列：防臭方巾、手帕", "contact": "Samuel Tsai", "client": "世展科技股份有限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉\n手搖飲品牌", "contact": "賴珮華", "client": "丘森股份有限公司", "status": "二次｜未回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "消費性電子產品", "contact": "張沛甄", "client": "亦果科技有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 無需求(覺得樂天沒有什麼成效)", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "Acrylic", "contact": "石白光", "client": "吉元發有限公司", "status": "二次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 無需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "鐵蛋,豆干", "contact": "林瑞銘", "client": "安記食品有限公司", "status": "二次｜未回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 未接", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "美妝保養品", "contact": "何彩鳳", "client": "安繪科技有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/27 評估價格中", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "農產品金時人參紅蘿蔔、金時人參紅蘿蔔汁", "contact": "張翔竣", "client": "金時人蔘企業社", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 無需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "家具", "contact": "楊婷婷", "client": "建治有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 因目前手上滿多事情在處理,暫時無法先往其他平台進行", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "腳踏車零件(小型五金)", "contact": "Emily Lin", "client": "建新金屬有限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "電子紙手機保護殼", "contact": "熊", "client": "恒達精密", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 之後再考慮", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "桌上文具禮絣", "contact": "余江文", "client": "昶盟有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 未接", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "晴雨窗;蟲擋;後遮", "contact": "王基宏", "client": "振益昌有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 未接\n3/18 信件寄送失敗", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "冰淇淋挖勺", "contact": "Alex Li", "client": "浤鑫股份有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/10", "progress": "Proposal", "situation": "已收到回覆,約會議,內部再討論", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "六角水", "contact": "葉璟陞", "client": "捷達富國際事業也限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "松露禮盒、烏魚子、金字塔茶葉禮盒\n掛勾、筷子多元雜物等", "contact": "張國昱", "client": "傑爾富貿易有限公司", "status": "二次｜未回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 掛電話", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "時尚", "contact": "Yuan袁秀芬", "client": "富勝紡織股份有限公司", "status": "首次｜已回應", "noMeet": "其他", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 打錯?", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "紅茶", "contact": "陳妤蓁", "client": "普林斯企業有限公司", "status": "二次｜已回應", "noMeet": "窗口忙碌待聯繫", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 再忙晚點聯繫", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "工業電腦", "contact": "侯建旭", "client": "新漢股份有限公司", "status": "二次｜未回應", "noMeet": "不合適", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 信件寄送失敗", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "RTD珍珠奶茶, 沖泡組合包", "contact": "陳明宗", "client": "鼎祥國際有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/25 重新發一次,會在看一下", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "運動器材\n踩踏器、拉舉輔助器等", "contact": "張梅", "client": "榮曜國際有限公司", "status": "二次｜已回應", "noMeet": "無回覆", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 接了無回覆", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "台灣食品\n蜜餞類(主要為梅子相關)", "contact": "張瑞鄉\n林玉珊", "client": "寬達生技有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "養生茶", "contact": "吳淑惠", "client": "臻品植萃有限公司", "status": "二次｜未回應", "noMeet": "評估中", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 有興趣會再回覆", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "新客", "date": "2026/03/03", "sales": "Stacy", "product": "有機棉服飾", "contact": "楊俊國", "client": "藍天大地股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 未接", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "冰酷柳橙綠茶含耶果, 印度拉茶, 烏龍奶茶, 珍珠奶茶", "contact": "ERIC", "client": "高雀斯有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 會再看一下信件,有需要會主動聯繫", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "牛肉麵調理包", "contact": "張", "client": "藍海饌食品有限公司", "status": "首次｜未回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/13 未接,主要是要通知有先上架到4月底,若不妥會下架,後續要收費\n已上架", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "吳春瑩", "client": "加霖國際有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 暫時未考慮", "note": "GOT 維運中\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "蜂蜜", "contact": "盧室辰", "client": "阡郁有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "需要再評估\n已發Line", "note": "GOT 維運中\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "吳愷芬", "client": "幸一生醫科技有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "Approach", "situation": "3/23 免費曝光才要參加,要錢就無需求", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "可分解的茶葉膠囊(適用Nespresso Original膠囊咖啡機)", "contact": "邱子耘", "client": "士福國際貿易有限公司", "status": "首次｜已回應", "noMeet": "預算不足", "meeting": "N", "meetDate": "", "progress": "", "situation": "已發Line", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "乾拌麵", "contact": "張欣雅", "client": "大拙匠人食品有限公司", "status": "首次｜已回應", "noMeet": "無需求", "meeting": "", "meetDate": "", "progress": "", "situation": "3/13 老闆最近重心在美國市場\n已發Line", "note": "GOT 維運中\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "柯新潔", "client": "珀興企業有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 有收到訊息,內部會再評估", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "保健食品、美妝品", "contact": "何怡葭 Coco Ho (窗口)\n林芷晴", "client": "中華海洋生技股份有限公司", "status": "首次｜已回應", "noMeet": "評估中", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 會轉給內部來做評估", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "手機架", "contact": "林志杰 Cadmus Lin", "client": "卡斯袙工藝工程有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/24 目前無需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "CUTTING BOARD", "contact": "陳品妙", "client": "台灣蓮特精密股份有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/23 無需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "機能性紡織品(運動襪、內衣褲、護具等)", "contact": "蔡語襄", "client": "弘康國際股份有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/09", "progress": "Proposal", "situation": "3/13 尚未評估\n已收到回覆,約會議,內部再討論", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "食品、口罩", "contact": "陳芷容", "client": "生機生技股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/23 未接,改寄到service信箱\n3/18 信件寄送失敗", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "靈芝切片、靈芝子實體膠囊", "contact": "朱博湧", "client": "田美生技股份有限公司", "status": "二次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/23 未接,商品單價偏高,不適合在tiktok上銷售", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "沙茶醬、紅蔥醬、麻辣醬", "contact": "呂姿諭", "client": "好帝一食品有限公司", "status": "二次｜未回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "3/23 未接", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "各式梅餅.仙楂梅子.薄荷梅果.梅粉.黑QQ.化應子.黑糖老薑茶.禮盒", "contact": "潘虹", "client": "彤旺食品有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/23", "progress": "", "situation": "3/23 會議", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉", "contact": "李玠融", "client": "李家茶莊", "status": "首次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/19 未接", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "五金", "contact": "胡慧玲", "client": "卓達國際有限公司", "status": "首次｜已回應", "noMeet": "預算不足", "meeting": "", "meetDate": "", "progress": "", "situation": "", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "台灣傳統茶點", "contact": "林孜盈", "client": "卦山生活文創有限公司", "status": "首次｜已回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 會議上,1630後聯繫掛電話", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "酵素", "contact": "侯佳餘", "client": "東方佳聯生物科技有限公司", "status": "首次｜未回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 未接", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "100%青梅果萃、酵素、冰糖梅果", "contact": "謝慧蓉", "client": "建邑國際行銷股份有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/11", "progress": "Proposal", "situation": "預算不足,無需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶包, 鳳梨酥, 辣醬, 乾拌麵", "contact": "徐麗婷", "client": "珍冠家企業有限公司", "status": "首次｜已回應", "noMeet": "評估中", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 需要先看過資料以及費用跟老闆討論", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "居家雜貨", "contact": "黃朝記", "client": "展達豐汽車用品有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18  先看信件", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "張威智", "client": "舜濱生技農場股份有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/19", "progress": "", "situation": "3/19 因為樂天銷量普通,還需要評估\n已發Line", "note": "GOT 維運中"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "竹物纖維環保吸管/餐具", "contact": "林培裕", "client": "益農行科技股份有限公司", "status": "首次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 語音", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "車燈、車用器材、露營燈", "contact": "阮品霓", "client": "彪雅有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "12/19 有聯繫過了,但目前沒有需求", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉、伴手禮", "contact": "鄭兆傑", "client": "御奉企業股份有限公司", "status": "首次｜未回應", "noMeet": "未接", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 未接", "note": "GOT 維運中\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "鳳梨酥", "contact": "鄭翔文", "client": "滋養軒食品廠", "status": "首次｜未回應", "noMeet": "掛電話", "meeting": "", "meetDate": "", "progress": "", "situation": "3/18 掛電話", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "冬瓜粉糖、冬瓜茶磚、地瓜葉茶", "contact": "蕭崇瑋 Stan Xiao\n蕭小姐（副窗口、CC）\n吳小姐（副窗口、CC）\n葉小姐（聯繫、轉達 Stan）", "client": "詠糧實業有限公司", "status": "首次｜未回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/17 掛電話，他們家很難找到人", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "台灣茶、冷泡茶包、熱泡茶包、濾掛茶包、風味型烏龍茶", "contact": "CHEN (Ami)", "client": "新鳳鳴茶業有限公司", "status": "首次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/23", "progress": "Approach", "situation": "3/23 會議 ,週五要出國到英國,最快四月中才有空評估", "note": "2025 數商專案\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "飲料", "contact": "丁小姐 (窗口)\n李庭葦 (助理)", "client": "瑄恆國際行銷有限公司", "status": "首次｜已回應", "noMeet": "窗口忙碌待聯繫", "meeting": "", "meetDate": "", "progress": "", "situation": "3/17 內部近期比較忙,且須評估成本,先將資訊寄mail,有需求會再聯繫", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "茶葉", "contact": "徐藝秦", "client": "劉記興業有限公司", "status": "首次｜已回應", "noMeet": "評估中", "meeting": "", "meetDate": "", "progress": "", "situation": "3/13 最近較忙", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "", "contact": "賴敬憲", "client": "澄玉水產商行", "status": "首次｜未回應", "noMeet": "", "meeting": "", "meetDate": "", "progress": "", "situation": "3/13 未接", "note": "GOT 維運中\nNETSEA 專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "食品及工具", "contact": "謝超任", "client": "毅森國際股份有限公司", "status": "二次｜已回應", "noMeet": "", "meeting": "Y", "meetDate": "2026/03/17", "progress": "Proposal", "situation": "3/17 因為不是自己的品牌,如果要做的話希望可以用買斷的方式", "note": "2025 數商專案"}, {"id": "", "source": "專案組-數商樂天", "newOld": "老客", "date": "2026/03/03", "sales": "Stacy", "product": "高爾夫球皮帶", "contact": "高振傑", "client": "潤玉企業股份有限公司", "status": "二次｜已回應", "noMeet": "預算不足", "meeting": "N", "meetDate": "", "progress": "", "situation": "3/13 要收費就沒意願", "note": "2025 數商專案"}, {"id": "", "source": "Meta投廣", "newOld": "新客", "date": "2025/12/12", "sales": "Tank", "product": "護目鏡、眼鏡", "contact": "林旭洸", "client": "締沅科技股份有限公司", "status": "首次｜已回應", "noMeet": "無回覆", "meeting": "Y", "meetDate": "2026/02/03", "progress": "Disappearance", "situation": "12/12發信；12/12加line群\n1/27約2/3會議；2/10、2/23關心無回覆\n3/2提供JWAY TK影片參考\n3/9再次關心皆無回覆", "note": ""}];
+var leadsMetOpen = false;
+var leadsChartSrcInst = null;
+var leadsChartSrcMetInst = null;
+var leadsChartReasonInst = null;
+
+function initLeads() {
+  renderLeadsCharts();
+}
+
+function switchLeadsWeek(v) { /* 單週次，無需切換 */ }
+
+function toggleLeadsMet() {
+  leadsMetOpen = !leadsMetOpen;
+  var el  = document.getElementById('leadsMetDetail');
+  var btn = document.getElementById('leadsMetBtn');
+  el.classList.toggle('open', leadsMetOpen);
+  btn.textContent = leadsMetOpen ? '▲ 收起' : '▼ 展開';
+}
+
+function filterLeadsMet() {
+  var s  = (document.getElementById('l-met-search').value || '').toLowerCase();
+  var sf = document.getElementById('l-met-sales').value;
+  var PROG_COLOR = {'Coverage':'#16a34a','Commit':'#2563eb','Closing':'#7c3aed','Proposal':'#ea580c','Approach':'#ca8a04','Prospecting':'#64748b','Lost':'#dc2626','Cold Storage':'#94a3b8','Disappearance':'#94a3b8'};
+  var fd = LEADS_RAW.filter(function(d) {
+    if (d.meeting !== 'Y') return false;
+    if (sf && d.sales !== sf) return false;
+    if (s && !(d.client + d.situation + d.note).toLowerCase().includes(s)) return false;
+    return true;
+  });
+  var html = fd.map(function(d) {
+    var client  = d.client.split('\n')[0];
+    var src     = d.source.replace('專案組-數商樂天','數商樂天');
+    var sit     = d.situation.replace(/\n/g,' ').slice(0,60) + (d.situation.length>60?'…':'');
+    var note    = d.note.replace(/\n/g,' ').slice(0,30);
+    var noBadge = d.newOld==='新客' ? '<span class="badge-new">新客</span>' : '<span class="badge-old">老客</span>';
+    var meetDt  = (d.meetDate && d.meetDate!=='1899/12/30') ? d.meetDate : '—';
+    var prog    = d.progress||'';
+    var pc      = (PROG_COLOR[prog]||'#94a3b8');
+    var pb      = prog ? '<span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;background:'+pc+'22;color:'+pc+';">'+prog+'</span>' : '—';
+    return '<tr>'+
+      '<td style="color:var(--gray-500);font-size:11px;white-space:nowrap;">'+d.date+'</td>'+
+      '<td style="font-weight:500;">'+client+'</td>'+
+      '<td style="font-size:11px;">'+src+'</td>'+
+      '<td>'+noBadge+'</td>'+
+      '<td style="color:var(--blue);font-weight:500;">'+d.sales+'</td>'+
+      '<td style="font-size:11px;white-space:nowrap;">'+meetDt+'</td>'+
+      '<td class="contact-status">'+d.status+'</td>'+
+      '<td style="font-size:11px;max-width:200px;">'+sit+'</td>'+
+      '<td style="font-size:11px;color:var(--gray-400);">'+note+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('leadsMetBody').innerHTML = html ||
+    '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--gray-300);">無符合條件的資料</td></tr>';
+}
+
+function switchLeadsTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('leads-tab-' + id).classList.add('active');
+  if (id === 'src')    renderLeadsSrcCharts();
+  if (id === 'reason') renderLeadsReasonChart();
+}
+
+function renderLeadsCharts() {
+  renderLeadsSrcCharts();
+  renderLeadsReasonChart();
+}
+
+function renderLeadsSrcCharts() {
+  if (leadsChartSrcInst)    { leadsChartSrcInst.destroy(); }
+  if (leadsChartSrcMetInst) { leadsChartSrcMetInst.destroy(); }
+
+  var srcLabels = ['數商樂天', 'Meta投廣'];
+  var srcCounts = [83, 1];
+  var srcMet    = [9, 1];
+
+  leadsChartSrcInst = new Chart(document.getElementById('leadsChartSrc'), {
+    type: 'bar',
+    data: {
+      labels: srcLabels,
+      datasets: [{ label:'名單數', data: srcCounts,
+        backgroundColor: ['rgba(37,99,235,0.15)','rgba(124,58,237,0.15)'],
+        borderColor:['#2563eb','#7c3aed'], borderWidth:2, borderRadius:6 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, grid:{color:'#f3f4f6'}, ticks:{font:{size:11}} },
+               x:{ grid:{display:false}, ticks:{font:{size:12}} } } }
+  });
+
+  leadsChartSrcMetInst = new Chart(document.getElementById('leadsChartSrcMet'), {
+    type: 'bar',
+    data: {
+      labels: srcLabels,
+      datasets: [
+        { label:'開會', data: srcMet, backgroundColor:['rgba(22,163,74,0.15)','rgba(22,163,74,0.15)'], borderColor:'#16a34a', borderWidth:2, borderRadius:6 },
+        { label:'名單', data: srcCounts, backgroundColor:['rgba(37,99,235,0.08)','rgba(124,58,237,0.08)'], borderColor:['#2563eb','#7c3aed'], borderWidth:1, borderRadius:6 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{font:{size:11}, boxWidth:10} } },
+      scales:{ y:{ beginAtZero:true, grid:{color:'#f3f4f6'}, ticks:{font:{size:11}} },
+               x:{ grid:{display:false}, ticks:{font:{size:12}} } } }
+  });
+}
+
+function renderLeadsReasonChart() {
+  if (leadsChartReasonInst) { leadsChartReasonInst.destroy(); }
+
+  // 來自 Other_Leads_Database 的 noMeet 欄位
+  var reasonMap = {};
+  LEADS_RAW.forEach(function(d) {
+    if (d.meeting !== 'Y' && d.noMeet && d.noMeet.trim()) {
+      var r = d.noMeet.trim();
+      reasonMap[r] = (reasonMap[r] || 0) + 1;
+    }
+  });
+  var sorted = Object.keys(reasonMap).sort(function(a,b){ return reasonMap[b]-reasonMap[a]; });
+  var labels = sorted;
+  var counts = sorted.map(function(r){ return reasonMap[r]; });
+  var total  = counts.reduce(function(s,v){ return s+v; }, 0);
+
+  var wrap = document.getElementById('leadsReasonWrap');
+  wrap.style.height = Math.max(160, labels.length * 36) + 'px';
+
+  leadsChartReasonInst = new Chart(document.getElementById('leadsChartReason'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label:'人數', data: counts,
+        backgroundColor: 'rgba(234,88,12,0.12)',
+        borderColor:'#ea580c', borderWidth:2, borderRadius:4 }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{ beginAtZero:true, grid:{color:'#f3f4f6'}, ticks:{font:{size:11},stepSize:1} },
+               y:{ grid:{display:false}, ticks:{font:{size:12}} } } }
+  });
+
+  // stat pills
+  var pillsHtml = sorted.map(function(r) {
+    var pct = total ? Math.round(reasonMap[r]/total*100)+'%' : '0%';
+    return '<div class="stat-pill">'+
+      '<span class="stat-pill-name">'+r+'</span>'+
+      '<span class="stat-pill-count orange">'+reasonMap[r]+' ('+pct+')</span>'+
+    '</div>';
+  }).join('');
+  document.getElementById('leadsReasonStats').innerHTML = pillsHtml;
+}
 </script>
+</body>
+</html>
